@@ -2,6 +2,41 @@
   @tailwind components;
   @tailwind utilities;
 
+
+
+/* tailwind로 변경 */
+html, body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header .footer {
+  width: 100%;
+  max-width: 2000px;
+}
+
+.main-content {
+  flex: 1;
+  width: 100%;
+  max-width: 2000px;
+}
+
+
+
+
+
+
+
+
+
+
+
   @layer base {
     :root {
       --background: 0 0% 100%;
