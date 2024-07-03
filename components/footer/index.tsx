@@ -4,7 +4,7 @@ const Footer = () => (
     <footer className="text-gray-600 body-font">
         <div className="container px-5 py-8 mx-auto flex items-center flex-row">
             <span className="ml-3 text-xl flex title-font font-medium items-center justify-start text-gray-900 flex-wrap">
-                한성대학교 비공개선택
+                한성대학교 시네마캐릭터
             </span>
             <span className="inline-flex ml-auto justify-center flex-wrap">
                 <a href="https://github.com/shshjhjh4455/character_chatbot_web" className="text-gray-500" target="_blank">

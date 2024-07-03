@@ -1,17 +1,29 @@
 import Link from 'next/link';
+import { CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandDialogTrigger } from '../ui/command';
 
 const linkStyle = {
   marginRight: 15
 };
-/* 헤더 css처리 해야함 */
+
 const Header = () => (
-  <div>
-    시네마챗봇(로고)
-    <Link style={linkStyle} href="/">시네마챗봇</Link>
-    css로 중간에 띄기
-    <Link style={linkStyle} href="/chatBot-page">ChatBot</Link>
-    <Link style={linkStyle} href="/my-profile">My profile</Link>
-    <Link style={linkStyle} href="/login">login</Link>
+  <div className="flex items-center justify-between p-6 bg-gray-800 text-white mb-8">
+    <div className="flex items-center">
+      <Link style={linkStyle} href="/">(로고) 시네마캐릭터</Link>
+      <Link style={linkStyle} href="/login">login</Link>
+    </div>
+    <div className="flex items-center">
+      <CommandDialogTrigger>
+        <CommandInput placeholder="Type a command or search..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Suggestions">
+            <CommandItem>Calendar</CommandItem>
+            <CommandItem>Search Emoji</CommandItem>
+            <CommandItem>Calculator</CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </CommandDialogTrigger>
+    </div>
   </div>
 );
 

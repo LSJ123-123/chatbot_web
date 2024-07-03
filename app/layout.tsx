@@ -19,15 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="header">
-          <Header />
-        </div>
-        <div className="main-content">
-          {children}
-        </div>
-        <div className="footer">
-          <Footer />
-        </div>
+        <Header />
+        {children}
+        <Footer />
       </body>
     </html>
   );
