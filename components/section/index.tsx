@@ -1,3 +1,13 @@
+
+import { Card, CardContent } from "@/components/ui/card"
+import {
+    Carousel,
+    CarouselContent,
+    CarouselItem,
+    CarouselNext,
+    CarouselPrevious,
+} from "@/components/ui/carousel"
+
 import ChatList from "../chat-list";
 
 //활용할 챗봇 정보 임시 데이터
@@ -36,17 +46,40 @@ const data = [
     }
 ]
 
-const Section = ({ text } : { text: string }) => {
+const Section = ({ text }: { text: string }) => {
     return (
-        <div className="container mx-auto p-5">
-            <h2>{text}</h2>
-            {/* 챗 리스트들이 가로로 무한 스크롤 될 수 있게 스타일, 화면에는 chatlist가 3개만 표시되고, 더 많은건 옆으로 넘길 수 있게, 화면은 고정된 상태로 리스트들만 움직이도록*/}
-            <div style={{ display: "flex", overflowX: "scroll", width: "100%", whiteSpace: "nowrap" }}>
-                {data.map((chatbot) => (
-                    <ChatList img={chatbot.img} name={chatbot.name} desc={chatbot.desc} link={chatbot.link} key={chatbot.name} />
+        <Carousel
+            opts={{
+                align: "start",
+            }}
+            className="w-full max-w-sm container mx-auto p-5"
+        >
+            <CarouselContent className="flex">
+                {/* 챗 리스트들이 가로로 무한 스크롤 될 수 있게 */}
+                <div className="flex space-x-4 overflow-x-auto">
+                    {data.map((chatbot) => (
+                        <ChatList img={chatbot.img} name={chatbot.name} desc={chatbot.desc} link={chatbot.link} key={chatbot.name} />
+                    ))}
+                </div>
+
+                {/* Carousel Items */}
+                {Array.from({ length: 5 }).map((_, index) => (
+                    <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+                        <h2>{data[index].name}</h2>
+                        <div className="p-1">
+                            <Card>
+                                <CardContent className="flex flex-col aspect-square items-center justify-center p-6">
+                                    <img src={data[index].img} alt={data[index].name} className="w-20 h-20 object-cover rounded-full" />
+                                    <p className="text-center">{data[index].desc}</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </CarouselItem>
                 ))}
-            </div>
-        </div>
+            </CarouselContent>
+            <CarouselPrevious className="bg-gray-200 p-2 rounded-full absolute top-1/2 left-4 transform -translate-y-1/2 -translate-x-1/2" />
+            <CarouselNext className="bg-gray-200 p-2 rounded-full absolute top-1/2 right-4 transform -translate-y-1/2 translate-x-1/2" />
+        </Carousel>
     )
 };
 
