@@ -1,5 +1,5 @@
 
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import {
     Carousel,
     CarouselContent,
@@ -8,7 +8,8 @@ import {
     CarouselPrevious,
 } from "@/components/ui/carousel"
 
-import ChatList from "../chat-list";
+import ChatList from "@/components/chat-list";
+import Link from "next/link";
 
 //활용할 챗봇 정보 임시 데이터
 //들어갈 건 챗봇의 이미지, 이름, 간단한 설명
@@ -52,7 +53,7 @@ const Section = ({ text }: { text: string }) => {
             opts={{
                 align: "start",
             }}
-            className="w-full max-w-sm container mx-auto p-5"
+            className="w-full max-w-screen container mx-auto p-5"
         >
             <CarouselContent className="flex">
                 {/* 챗 리스트들이 가로로 무한 스크롤 될 수 있게 */}
@@ -63,16 +64,15 @@ const Section = ({ text }: { text: string }) => {
                 </div>
 
                 {/* Carousel Items */}
-                {Array.from({ length: 5 }).map((_, index) => (
+                {data.map((chatbot, index) => (
                     <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
-                        <h2>{data[index].name}</h2>
+                        <h2>{chatbot.name}</h2>
                         <div className="p-1">
-                            <Card>
-                                <CardContent className="flex flex-col aspect-square items-center justify-center p-6">
-                                    <img src={data[index].img} alt={data[index].name} className="w-20 h-20 object-cover rounded-full" />
-                                    <p className="text-center">{data[index].desc}</p>
-                                </CardContent>
-                            </Card>
+                            <Link href={`/chatBot-page/${chatbot.link}`}>
+                                <Card>
+                                <ChatList img={chatbot.img} name={chatbot.name} desc={chatbot.desc} link={chatbot.link} key={chatbot.name} />
+                                </Card>
+                            </Link>
                         </div>
                     </CarouselItem>
                 ))}
