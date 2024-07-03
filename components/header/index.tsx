@@ -5,13 +5,15 @@ const linkStyle = {
   marginRight: 15
 };
 
-const Header = () => (
-  <div className="flex items-center justify-between p-6 bg-gray-800 text-white mb-8">
-    <div className="flex items-center">
+const Header = () => {
+
+  return (
+  <header className="flex items-center justify-between p-6 bg-gray-800 text-white mb-8">
+    <div className="flex items-center ml-4">
       <Link style={linkStyle} href="/">(로고) 시네마캐릭터</Link>
       <Link style={linkStyle} href="/login">login</Link>
     </div>
-    <div className="flex items-center">
+    <div className="flex items-center mr-4">
       <CommandDialogTrigger>
         <CommandInput placeholder="Type a command or search..." />
         <CommandList>
@@ -24,7 +26,7 @@ const Header = () => (
         </CommandList>
       </CommandDialogTrigger>
     </div>
-  </div>
-);
+  </header>
+)};
 
 export default Header;
