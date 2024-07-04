@@ -1,5 +1,6 @@
 "use client"
 
+import ChatBox from '@/components/chat-box';
 import { useState, useRef } from 'react';
 
 export default function ChatBotPage({ params }: { params: any }) {
@@ -25,13 +26,10 @@ export default function ChatBotPage({ params }: { params: any }) {
 
     return (
         <div style={{ maxWidth: '600px', margin: 'auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-            <h1>{params.chatbotId}와 채팅하기</h1>
+            <h1 className="text-center">{params.chatbotId}와 채팅하기</h1>
             <div style={{ minHeight: '300px', maxHeight: '400px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '8px', marginBottom: '10px', padding: '10px' }}>
                 {messages.map((message, index) => (
-                    <div key={index} style={{ marginBottom: '10px' }}>
-                        {message.sender === 'user' && <div style={{ textAlign: 'right', margin: '0 10px' }}>{message.text}</div>}
-                        {message.sender === 'bot' && <div style={{ textAlign: 'left', margin: '0 10px' }}>{message.text}</div>}
-                    </div>
+                    <ChatBox key={index} message={message} />
                 ))}
             </div>
             <div style={{ display: 'flex' }}>
