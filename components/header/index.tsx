@@ -20,7 +20,7 @@ const linkStyle = {
 const Header = () => {
 
   return (
-    <header className="flex items-center justify-between p-6 bg-zinc-800 text-white mb-8">
+    <header className="flex items-center justify-between p-6 bg-zinc-800 text-white">
       <div className="flex items-center ml-4 space-x-4 lg:space-x-0">
         <Sheet>
           <SheetTrigger className="lg:hidden" asChild>
