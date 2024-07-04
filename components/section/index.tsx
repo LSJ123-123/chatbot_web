@@ -1,4 +1,4 @@
-
+// 크기 조절만 하면 될 거 같음
 import { Card } from "@/components/ui/card"
 import {
     Carousel,
@@ -68,11 +68,9 @@ const Section = ({ text }: { text: string }) => {
                     <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                         <h2>{chatbot.name}</h2>
                         <div className="p-1">
-                            <Link href={`/chatBot-page/${chatbot.link}`}>
                                 <Card>
-                                <ChatList img={chatbot.img} name={chatbot.name} desc={chatbot.desc} link={chatbot.link} key={chatbot.name} />
+                                    <ChatList img={chatbot.img} name={chatbot.name} desc={chatbot.desc} link={chatbot.link} key={chatbot.name} />
                                 </Card>
-                            </Link>
                         </div>
                     </CarouselItem>
                 ))}
