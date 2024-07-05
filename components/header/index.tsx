@@ -1,24 +1,20 @@
-"use client";
-
 import Link from 'next/link';
-import { MenuIcon, PanelsTopLeft } from "lucide-react";
+import { MenuIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
-  SheetHeader,
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandDialogTrigger } from '../ui/command';
-import { cn } from '@/lib/utils';
+import AuthButton from '../auth-button';
 
 const linkStyle = {
   marginRight: 15
 };
 
 const Header = () => {
-
   return (
     <header className="flex items-center justify-between p-6 bg-zinc-800 text-white">
       <div className="flex items-center ml-4 space-x-4 lg:space-x-0">
@@ -42,7 +38,7 @@ const Header = () => {
           </SheetContent>
         </Sheet>
         <Link style={linkStyle} href="/">(로고) 시네마캐릭터</Link>
-        <Link style={linkStyle} href="/login">login</Link>
+        <AuthButton />
       </div>
       <div className="flex items-center mr-4">
         <CommandDialogTrigger>
