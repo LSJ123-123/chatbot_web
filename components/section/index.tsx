@@ -1,15 +1,14 @@
 // 크기 조절만 하면 될 거 같음
-import { Card } from "@/components/ui/card"
+// import { Card } from "@/components/ui/card";
 import {
     Carousel,
     CarouselContent,
     CarouselItem,
     CarouselNext,
     CarouselPrevious,
-} from "@/components/ui/carousel"
+} from "@/components/ui/carousel";
 
 import ChatList from "@/components/chat-list";
-import Link from "next/link";
 
 //활용할 챗봇 정보 임시 데이터
 //들어갈 건 챗봇의 이미지, 이름, 간단한 설명
@@ -55,22 +54,16 @@ const Section = ({ text }: { text: string }) => {
             }}
             className="w-full max-w-screen container mx-auto p-5"
         >
+            {text}
             <CarouselContent className="flex">
                 {/* 챗 리스트들이 가로로 무한 스크롤 될 수 있게 */}
-                <div className="flex space-x-4 overflow-x-auto">
-                    {data.map((chatbot) => (
-                        <ChatList img={chatbot.img} name={chatbot.name} desc={chatbot.desc} link={chatbot.link} key={chatbot.name} />
-                    ))}
-                </div>
-
                 {/* Carousel Items */}
                 {data.map((chatbot, index) => (
                     <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
-                        <h2>{chatbot.name}</h2>
                         <div className="p-1">
-                                <Card>
-                                    <ChatList img={chatbot.img} name={chatbot.name} desc={chatbot.desc} link={chatbot.link} key={chatbot.name} />
-                                </Card>
+                            {/* <Card>  없애도 무방 */}
+                                <ChatList img={chatbot.img} name={chatbot.name} desc={chatbot.desc} link={chatbot.link} key={chatbot.name} />
+                            {/* </Card> */}
                         </div>
                     </CarouselItem>
                 ))}

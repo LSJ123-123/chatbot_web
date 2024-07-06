@@ -1,3 +1,4 @@
+"use client"
 import Section from "@/components/section";
 
 export default function Home() {
@@ -7,5 +8,5 @@ export default function Home() {
       <Section text="챗봇 인기 순위" />
       <Section text="챗봇 카테고리" />
     </section>
-  );
+  )
 }
