@@ -2,6 +2,7 @@
 
 import ChatBox from '@/components/chat-box';
 import { useState, useRef } from 'react';
+import { Label } from '@/components/ui/label';
 
 export default function ChatBotPage({ params }: { params: any }) {
     const [messages, setMessages] = useState<any[]>([]); // 메시지를 저장할 상태
@@ -24,17 +25,39 @@ export default function ChatBotPage({ params }: { params: any }) {
         }
     };
 
+    const img: React.CSSProperties = {
+        width: '50px',
+        height: '50px',
+        borderRadius: '50%',
+        objectFit: 'cover',
+        marginRight: '20px'
+    }
+
     return (
-        <div style={{ maxWidth: '600px', margin: 'auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-            <h1 className="text-center">{params.chatbotId}와 채팅하기</h1>
-            <div style={{ minHeight: '300px', maxHeight: '400px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '8px', marginBottom: '10px', padding: '10px' }}>
+        <div className='flex flex-col h-[calc(100vh-180px)] mx-auto p-4 border border-gray-300 rounded-lg'>
+            <div className='flex items-center mb-2'>
+                <img src="https://via.placeholder.com/50" alt="chatbot" style={img} />
+                <Label className='text-lg font-bold'>ChatBot</Label>
+            </div>
+            <div className='flex-grow overflow-y-auto border border-gray-200 rounded-lg mb-2 p-2'>
                 {messages.map((message, index) => (
                     <ChatBox key={index} message={message} />
                 ))}
             </div>
-            <div style={{ display: 'flex' }}>
-                <input type="text" value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} placeholder="메시지를 입력해주세요" style={{ flex: '1', padding: '10px', marginRight: '10px', borderRadius: '4px', border: '1px solid #ccc' }} />
-                <button onClick={handleSendMessage} style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>전송</button>
+            <div className='flex'>
+                <input
+                    type="text"
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    placeholder="메시지를 입력해주세요"
+                    className='flex-grow p-2 mr-2 rounded border border-gray-300'
+                />
+                <button
+                    onClick={handleSendMessage}
+                    className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600'
+                >
+                    전송
+                </button>
             </div>
         </div>
     );
