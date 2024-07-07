@@ -1,64 +1,67 @@
 "use client"
 
 import ChatBox from '@/components/chat-box';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function ChatBotPage({ params }: { params: any }) {
-    const [messages, setMessages] = useState<any[]>([]); // 메시지를 저장할 상태
-    const msgRef = useRef(messages);
-    msgRef.current = messages;
-    const [inputMessage, setInputMessage] = useState<string>(''); // 입력 필드의 메시지 상태
+    const [messages, setMessages] = useState<any[]>([]);
+    const [inputMessage, setInputMessage] = useState<string>('');
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // 메시지를 보내는 함수
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
     const handleSendMessage = () => {
         if (inputMessage.trim() !== '') {
-            const newMessage = { text: inputMessage, sender: 'user' }; // 사용자가 보낸 메시지
-            setMessages([...messages, newMessage]); // 기존 메시지에 새로운 메시지 추가
-            setInputMessage(''); // 입력 필드 초기화
+            const newMessage = { text: inputMessage, sender: 'user' };
+            setMessages(prev => [...prev, newMessage]);
+            setInputMessage('');
 
-            // 챗봇의 응답 시뮬레이션 (실제 챗봇과의 상호작용으로 대체해야 함)
             setTimeout(() => {
-                const botResponse = { text: `Response from ${params.chatbotId}`, sender: 'bot' }; // 챗봇의 응답
-                setMessages([...msgRef.current, botResponse]); // 기존 메시지에 챗봇의 응답 추가
-            }, 500); // 응답 지연 시간 시뮬레이션
+                const botResponse = { text: `Response from ${params.chatbotId}`, sender: 'bot' };
+                setMessages(prev => [...prev, botResponse]);
+            }, 500);
         }
     };
 
-    const img: React.CSSProperties = {
-        width: '50px',
-        height: '50px',
-        borderRadius: '50%',
-        objectFit: 'cover',
-        marginRight: '20px'
-    }
-
     return (
-        <div className='flex flex-col h-[calc(100vh-180px)] mx-auto p-4 border border-gray-300 rounded-lg'>
-            <div className='flex items-center mb-2'>
-                <img src="https://via.placeholder.com/50" alt="chatbot" style={img} />
-                <Label className='text-lg font-bold'>ChatBot</Label>
+        <div className='flex flex-col h-[calc(100vh-180px)] max-w-4xl mx-auto p-6 bg-zinc-100 rounded-lg shadow-lg'>
+            <div className='flex items-center mb-6 ml-2'>
+                <div className='w-14 h-14 bg-zinc-300 rounded-full mr-4'></div>
+                <Label className='text-2xl font-bold text-zinc-800'>{params.chatbotId}</Label>
             </div>
-            <div className='flex-grow overflow-y-auto border border-gray-200 rounded-lg mb-2 p-2'>
-                {messages.map((message, index) => (
-                    <ChatBox key={index} message={message} />
-                ))}
-            </div>
-            <div className='flex'>
-                <input
+            <ScrollArea className='flex-grow mb-6 p-6 bg-white rounded-lg shadow-inner'>
+                <div className='space-y-4'>
+                    {messages.map((message, index) => (
+                        <ChatBox key={index} message={message} />
+                    ))}
+                    <div ref={messagesEndRef} />
+                </div>
+            </ScrollArea>
+            <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className='flex space-x-4'>
+                <Input
                     type="text"
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="메시지를 입력해주세요"
-                    className='flex-grow p-2 mr-2 rounded border border-gray-300'
+                    className='flex-grow bg-white text-lg'
                 />
-                <button
-                    onClick={handleSendMessage}
-                    className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600'
+                <Button
+                    type="submit"
+                    className='bg-zinc-700 hover:bg-zinc-600 text-white px-6 py-2 text-lg'
                 >
                     전송
-                </button>
-            </div>
+                </Button>
+            </form>
         </div>
     );
 }

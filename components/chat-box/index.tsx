@@ -1,4 +1,3 @@
-
 interface ChatBoxProps {
     message: {
         sender: string;
@@ -8,8 +7,12 @@ interface ChatBoxProps {
 
 const ChatBox = ({ message }: ChatBoxProps) => {
     return (
-        <div style={{ marginBottom: '10px', textAlign: message.sender === 'user' ? 'right' : 'left' }}>
-            <div style={{ display: 'inline-block', padding: '10px', borderRadius: '8px', backgroundColor: message.sender === 'user' ? '#007bff' : '#f1f0f0', color: message.sender === 'user' ? 'white' : 'black' }}>
+        <div className={`mb-4 ${message.sender === 'user' ? 'text-right' : 'text-left'}`}>
+            <div className={`inline-block max-w-[70%] px-4 py-2 rounded-lg ${
+                message.sender === 'user' 
+                    ? 'bg-zinc-700 text-white' 
+                    : 'bg-zinc-200 text-zinc-900'
+            }`}>
                 {message.text}
             </div>
         </div>
