@@ -34,7 +34,7 @@ export default function ChatBotPage({ params }: { params: any }) {
     };
 
     return (
-        <div className='flex flex-col h-[calc(100vh-180px)] max-w-4xl mx-auto p-6 bg-zinc-100 rounded-lg shadow-lg'>
+        <div className='flex flex-col h-[calc(100vh-200px)] max-w-4xl mx-auto p-6 bg-zinc-100 rounded-lg shadow-lg'>
             <div className='flex items-center mb-6 ml-2'>
                 <div className='w-14 h-14 bg-zinc-300 rounded-full mr-4'></div>
                 <Label className='text-2xl font-bold text-zinc-800'>{params.chatbotId}</Label>

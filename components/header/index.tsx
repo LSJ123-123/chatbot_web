@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { MenuIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,10 @@ const Header = () => {
             </nav>
           </SheetContent>
         </Sheet>
-        <Link style={linkStyle} href="/">(로고) 시네마캐릭터</Link>
+
+        <Link style={linkStyle} href="/">
+          <Image src="/images/logo.svg" alt="logo" width={180} height={60} />
+        </Link>
         <AuthButton />
       </div>
       <div className="flex items-center mr-4">
