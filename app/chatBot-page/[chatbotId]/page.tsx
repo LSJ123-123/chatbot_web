@@ -6,19 +6,51 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function ChatBotPage({ params }: { params: any }) {
     const [messages, setMessages] = useState<any[]>([]);
     const [inputMessage, setInputMessage] = useState<string>('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [playingIndex, setPlayingIndex] = useState<number | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const { toast } = useToast();
+    const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
+    
+    useEffect(() => {
+        const timer = setTimeout(scrollToBottom, 50);
+        return () => clearTimeout(timer);
+    }, [messages]);
+    
+    const generateBotResponse = async (text: string) => {
+        setIsGenerating(true);
+        let response = '';
+        for (let i = 0; i < text.length; i++) {
+            response += text[i];
+            setMessages(prev => [...prev.slice(0, -1), { text: response, sender: 'bot' }]);
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        setIsGenerating(false);
+        scrollToBottom();
+    };
 
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        // 초기 인사말 생성
+        const initialGreeting = `안녕하세요! ${params.chatbotId}입니다. 무엇을 도와드릴까요?`;
+        generateBotResponse(initialGreeting);
+
+        // 컴포넌트 언마운트 시 TTS 정지
+        return () => {
+            if (utteranceRef.current) {
+                window.speechSynthesis.cancel();
+            }
+        };
+    }, []);
 
     const handleSendMessage = () => {
         if (inputMessage.trim() !== '') {
@@ -27,9 +59,86 @@ export default function ChatBotPage({ params }: { params: any }) {
             setInputMessage('');
 
             setTimeout(() => {
-                const botResponse = { text: `Response from ${params.chatbotId}`, sender: 'bot' };
-                setMessages(prev => [...prev, botResponse]);
+                const botResponse = `Response from ${params.chatbotId}`;
+                setMessages(prev => [...prev, { text: '', sender: 'bot' }]);
+                generateBotResponse(botResponse);
             }, 500);
+        }
+    };
+
+    const handleDeleteMessage = (index: number) => {
+        setMessages(prev => {
+            const newMessages = prev.slice(0, index);
+            if (prev[index].sender === 'bot' && index > 0 && prev[index - 1].sender === 'user') {
+                // 봇 메시지를 삭제하고 이전 유저 메시지가 있는 경우에만 재생성
+                newMessages.push({ text: '', sender: 'bot' });
+                setTimeout(() => {
+                    const botResponse = `New response after deletion from ${params.chatbotId}`;
+                    generateBotResponse(botResponse);
+                }, 500);
+            }
+            return newMessages;
+        });
+    };
+
+    const handleEditMessage = (index: number, newText: string) => {
+        setMessages(prev => {
+            const newMessages = prev.map((msg, i) => i === index ? { ...msg, text: newText } : msg).slice(0, index + 1);
+            if (prev[index].sender === 'user' && index < prev.length - 1 && prev[index + 1].sender === 'bot') {
+                // 유저 메시지 편집 후 다음 메시지가 봇 메시지인 경우에만 재생성
+                newMessages.push({ text: '', sender: 'bot' });
+                setTimeout(() => {
+                    const botResponse = `New response after edit from ${params.chatbotId}`;
+                    generateBotResponse(botResponse);
+                }, 500);
+            }
+            return newMessages;
+        });
+    };
+
+    const handleCopyMessage = (text: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            toast({
+                title: "복사 완료",
+                description: "메시지가 클립보드에 복사되었습니다.",
+            });
+        }).catch(err => {
+            console.error('복사 실패:', err);
+            toast({
+                title: "복사 실패",
+                description: "메시지 복사 중 오류가 발생했습니다.",
+                variant: "destructive",
+            });
+        });
+    };
+
+    const handleRegenerateMessage = (index: number) => {
+        setMessages(prev => {
+            const newMessages = prev.slice(0, index);
+            newMessages.push({ text: '', sender: 'bot' });
+            const botResponse = `Regenerated response from ${params.chatbotId}`;
+            setTimeout(() => generateBotResponse(botResponse), 500);
+            return newMessages;
+        });
+    };
+
+    const handleTogglePlay = (index: number) => {
+        if (playingIndex === index) {
+            // 현재 재생 중인 메시지를 중지
+            window.speechSynthesis.cancel();
+            setPlayingIndex(null);
+        } else {
+            // 이전에 재생 중이던 메시지가 있다면 중지
+            if (playingIndex !== null) {
+                window.speechSynthesis.cancel();
+            }
+            
+            // 새 메시지 재생
+            const text = messages[index].text;
+            utteranceRef.current = new SpeechSynthesisUtterance(text);
+            utteranceRef.current.onend = () => setPlayingIndex(null);
+            window.speechSynthesis.speak(utteranceRef.current);
+            setPlayingIndex(index);
         }
     };
 
@@ -42,7 +151,16 @@ export default function ChatBotPage({ params }: { params: any }) {
             <ScrollArea className='flex-grow mb-6 p-6 bg-white rounded-lg shadow-inner'>
                 <div className='space-y-4'>
                     {messages.map((message, index) => (
-                        <ChatBox key={index} message={message} />
+                        <ChatBox
+                            key={index}
+                            message={message}
+                            onDelete={() => handleDeleteMessage(index)}
+                            onEdit={(newText) => handleEditMessage(index, newText)}
+                            onCopy={() => handleCopyMessage(message.text)}
+                            onRegenerate={() => handleRegenerateMessage(index)}
+                            onTogglePlay={() => handleTogglePlay(index)}
+                            isPlaying={playingIndex === index}
+                        />
                     ))}
                     <div ref={messagesEndRef} />
                 </div>
@@ -54,14 +172,17 @@ export default function ChatBotPage({ params }: { params: any }) {
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="메시지를 입력해주세요"
                     className='flex-grow bg-white text-lg'
+                    disabled={isGenerating}
                 />
                 <Button
                     type="submit"
                     className='bg-zinc-700 hover:bg-zinc-600 text-white px-6 py-2 text-lg'
+                    disabled={isGenerating}
                 >
                     전송
                 </Button>
             </form>
+            <Toaster />
         </div>
     );
 }
