@@ -1,4 +1,6 @@
 import React from 'react';
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 // ProfileType 열거형 정의
 export enum ProfileType {
@@ -22,62 +24,41 @@ interface ChatbotData {
 
 // ProfileProps 타입 정의
 interface ProfileProps {
-  type: ProfileType; // type을 ProfileType으로 지정
+  type: ProfileType;
   data: MemberData | ChatbotData;
 }
 
-const Profile = ({ type, data } : ProfileProps) => {
+const Profile = ({ type, data }: ProfileProps) => {
+  const isMember = type === ProfileType.Member;
+  const name = isMember ? (data as MemberData).username : (data as ChatbotData).name;
+  const imageUrl = isMember ? (data as MemberData).avatarUrl : (data as ChatbotData).imageUrl;
+
   return (
-    <div className="profile">
-      {/* type 값에 따라 다른 형태의 프로필을 표시 */}
-      {type === ProfileType.Member && (
-        <>
-          <img src={(data as MemberData).avatarUrl} alt={(data as MemberData).username} className="avatar" />
-          <div className="details">
-            <h2>{(data as MemberData).username}</h2>
-            <p><strong>Email:</strong> {(data as MemberData).email}</p>
-          </div>
-        </>
-      )}
-      {type === ProfileType.Chatbot && (
-        <>
-          <img src={(data as ChatbotData).imageUrl} alt={(data as ChatbotData).name} className="avatar" />
-          <div className="details">
-            <h2>{(data as ChatbotData).name}</h2>
-            <p><strong>만들어진 날짜:</strong> {(data as ChatbotData).made}</p>
-            <p>{(data as ChatbotData).description}</p>
-          </div>
-        </>
-      )}
-      <style jsx>{`
-        .profile {
-          display: flex;
-          align-items: center;
-          max-width: 600px;
-          margin: 20px auto;
-          padding: 20px;
-          border: 1px solid #ccc;
-          border-radius: 8px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .avatar {
-          width: 100px;
-          height: 100px;
-          border-radius: 50%;
-          object-fit: cover;
-          margin-right: 20px;
-        }
-        .details {
-          flex: 1;
-        }
-        h2 {
-          margin-top: 0;
-        }
-        p {
-          margin-bottom: 10px;
-        }
-      `}</style>
-    </div>
+    <Card className="max-w-3xl mx-auto my-5">
+      <CardContent className="flex items-center p-6">
+        <Avatar className="h-24 w-24 mr-6">
+          <AvatarImage src={imageUrl} alt="Profile" />
+          <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <CardHeader className="p-0 mb-2">
+            <h2 className="text-2xl font-bold">{name}</h2>
+          </CardHeader>
+          {isMember ? (
+            <p className="text-sm text-gray-600">
+              <strong>Email:</strong> {(data as MemberData).email}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>만들어진 날짜:</strong> {(data as ChatbotData).made}
+              </p>
+              <p className="text-sm">{(data as ChatbotData).description}</p>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

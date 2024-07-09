@@ -56,17 +56,21 @@ const AuthButton = () => {
     };
 
     if (loading) {
-        return <div style={{ width: '100px', height: '40px' }}></div>;
+        return (
+            <form>
+                <Button variant="secondary" className="ml-4" disabled>로그인</Button>
+            </form>
+        );
     }
 
     return (
         <div>
             {user ? (
                 <form>
-                    <Button variant="secondary" formAction={handleLogout}>로그아웃</Button>
+                    <Button variant="secondary" className="ml-4" formAction={handleLogout}>로그아웃</Button>
                 </form>
             ) : (
-                <Button asChild variant="secondary">
+                <Button asChild variant="secondary" className="ml-4">
                     <Link href="/login">로그인</Link>
                 </Button>
             )}

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import SemnaticLayout from "@/components/semantic-layout";
+import { cn } from "@/lib/utils";
+import Footer from "@/components/footer";
+import Header from "@/components/header";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -18,7 +20,21 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <SemnaticLayout>{children}</SemnaticLayout>
+        <main
+          className={cn(
+            "min-h-[calc(100vh-92px)] bg-zinc-50 dark:bg-zinc-900 transition-[margin-left] ease-in-out duration-300"
+          )}
+        >
+          <Header />
+          {children}
+        </main>
+        <footer
+          className={cn(
+            "transition-[margin-left] ease-in-out duration-300"
+          )}
+        >
+          <Footer />
+        </footer>
       </body>
     </html>
   );

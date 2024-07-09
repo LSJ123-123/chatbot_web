@@ -13,17 +13,17 @@ interface ChatBotProps {
 
 const ChatList = ({ img, name, desc, link }: ChatBotProps) => (
     //일정 크기 유지하도록
-    <Link href={link ? `/chatBot-page/${link}` : "/"}>
-        <CardContent className="flex flex-col items-center justify-center"> {/* 없애도 무방함 */}
+    <CardContent className="flex flex-col items-center justify-center"> {/* 없애도 무방함 */}
+        <Link href={link ? `/chatBot-page/${link}` : "/"}>
             {/* profile 컴포넌트 사용 */}
             <Profile type={ProfileType.Chatbot} data={{
-                name : name,
-                made : '2024.07.06',
-                description : desc,
-                imageUrl : img
+                name: name,
+                made: '2024.07.06',
+                description: desc,
+                imageUrl: img
             }} />
-        </CardContent>
-    </Link>
+        </Link>
+    </CardContent >
 );
 
 export default ChatList;

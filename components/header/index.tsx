@@ -11,17 +11,13 @@ import {
 import { CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandDialogTrigger } from '../ui/command';
 import AuthButton from '../auth-button';
 
-const linkStyle = {
-  marginRight: 15
-};
-
 const Header = () => {
   return (
     <header className="flex items-center justify-between p-6 bg-zinc-800 text-white">
-      <div className="flex items-center ml-4 space-x-4 lg:space-x-0">
+      <div className="flex items-center ml-4 space-x-0 lg:space-x-0">
         <Sheet>
-          <SheetTrigger className="lg:hidden" asChild>
-            <Button className="h-8" variant="secondary" size="icon">
+          <SheetTrigger asChild>
+            <Button className="h-8 mr-4" variant="secondary" size="icon">
               <MenuIcon size={20} />
             </Button>
           </SheetTrigger>
@@ -39,7 +35,7 @@ const Header = () => {
           </SheetContent>
         </Sheet>
 
-        <Link style={linkStyle} href="/">
+        <Link href="/" className='mr-4'>
           <Image src="/images/logo.svg" alt="logo" width={180} height={60} />
         </Link>
         <AuthButton />

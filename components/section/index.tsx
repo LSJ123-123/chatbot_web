@@ -54,7 +54,7 @@ const Section = ({ text }: { text: string }) => {
             }}
             className="w-full max-w-screen container mx-auto p-5"
         >
-            {text}
+            <p className="text-2xl font-bold mb-2">{text}</p>
             <CarouselContent className="flex">
                 {/* 챗 리스트들이 가로로 무한 스크롤 될 수 있게 */}
                 {/* Carousel Items */}
