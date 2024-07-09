@@ -8,6 +8,11 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
 
 export default function ChatBotPage({ params }: { params: any }) {
     const [messages, setMessages] = useState<any[]>([]);
@@ -21,12 +26,12 @@ export default function ChatBotPage({ params }: { params: any }) {
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
-    
+
     useEffect(() => {
         const timer = setTimeout(scrollToBottom, 50);
         return () => clearTimeout(timer);
     }, [messages]);
-    
+
     const generateBotResponse = async (text: string) => {
         setIsGenerating(true);
         let response = '';
@@ -132,7 +137,7 @@ export default function ChatBotPage({ params }: { params: any }) {
             if (playingIndex !== null) {
                 window.speechSynthesis.cancel();
             }
-            
+
             // 새 메시지 재생
             const text = messages[index].text;
             utteranceRef.current = new SpeechSynthesisUtterance(text);
@@ -146,7 +151,69 @@ export default function ChatBotPage({ params }: { params: any }) {
         <div className='flex flex-col h-[calc(100vh-200px)] max-w-4xl mx-auto p-6 bg-zinc-100 rounded-lg shadow-lg'>
             <div className='flex items-center mb-6 ml-2'>
                 <div className='w-14 h-14 bg-zinc-300 rounded-full mr-4'></div>
-                <Label className='text-2xl font-bold text-zinc-800'>{params.chatbotId}</Label>
+
+
+
+
+
+
+
+
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Label className='text-2xl font-bold text-zinc-800'>{params.chatbotId}</Label>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                        <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <h4 className="font-medium leading-none">넣어야 할 것 고민, 일단 챗봇의 콘텐츠 url</h4>
+                                <p className="text-sm text-muted-foreground">
+                                    Set the dimensions for the layer.
+                                </p>
+                            </div>
+                            <div className="grid gap-2">
+                                <div className="grid grid-cols-3 items-center gap-4">
+                                    <Label htmlFor="width">Width</Label>
+                                    <Input
+                                        id="width"
+                                        defaultValue="100%"
+                                        className="col-span-2 h-8"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-3 items-center gap-4">
+                                    <Label htmlFor="maxWidth">Max. width</Label>
+                                    <Input
+                                        id="maxWidth"
+                                        defaultValue="300px"
+                                        className="col-span-2 h-8"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-3 items-center gap-4">
+                                    <Label htmlFor="height">Height</Label>
+                                    <Input
+                                        id="height"
+                                        defaultValue="25px"
+                                        className="col-span-2 h-8"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-3 items-center gap-4">
+                                    <Label htmlFor="maxHeight">Max. height</Label>
+                                    <Input
+                                        id="maxHeight"
+                                        defaultValue="none"
+                                        className="col-span-2 h-8"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+
+
+
+
+
+
             </div>
             <ScrollArea className='flex-grow mb-6 p-6 bg-white rounded-lg shadow-inner'>
                 <div className='space-y-4'>
