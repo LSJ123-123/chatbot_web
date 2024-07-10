@@ -13,6 +13,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export default function ChatBotPage({ params }: { params: { chatbotId: string } }) {
+    const [chatbot, setChatbot] = useState<any>(null);
     const [messages, setMessages] = useState<any[]>([]);
     const [inputMessage, setInputMessage] = useState<string>('');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -25,34 +26,117 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
     const supabase = createClient()
     const router = useRouter()
 
+    // useEffect(() => {
+    //     const fetchChatbot = async () => {
+    //         const { data, error } = await supabase
+    //             .from('chatbots')
+    //             .select('*')
+    //             .eq('id', params.chatbotId)
+    //             .single();
+
+    //         if (error) {
+    //             console.error('Error fetching chatbot:', error);
+    //             return;
+    //         }
+
+    //         setChatbot(data);
+    //     };
+
+    //     fetchChatbot();
+    // }, [params.chatbotId]);
+    useEffect(() => {
+        const fetchChatbot = async () => {
+            const { data, error } = await supabase
+                .from('chatbots')
+                .select('*')
+                .eq('id', params.chatbotId)
+                .single();
+    
+            if (error) {
+                console.error('Error fetching chatbot:', error);
+                return;
+            }
+    
+            setChatbot(data);
+            
+            // chatbot 데이터가 로드된 후 초기 메시지 생성
+            if (data) {
+                const storedMessages = sessionStorage.getItem(`chatMessages_${params.chatbotId}`);
+                if (!storedMessages) {
+                    generateBotResponse(`안녕하세요! ${data.name}입니다. 무엇을 도와드릴까요?`);
+                }
+            }
+        };
+    
+        fetchChatbot();
+    }, [params.chatbotId]);
+
     useEffect(() => {
         checkLoginStatus();
         loadMessagesFromSessionStorage();
     }, []);
 
     //로그인 여부에 따라 챗봇의 데이터를 supabase에서 가져올 지 결정하는 함수
+    // const checkLoginStatus = async () => {
+    //     const { data: { user } } = await supabase.auth.getUser()
+    //     setIsLoggedIn(!!user);
+    //     if (user) {
+    //         await fetchOrCreateChatroom(user.id);
+    //     }
+    // }
     const checkLoginStatus = async () => {
         const { data: { user } } = await supabase.auth.getUser()
         setIsLoggedIn(!!user);
         if (user) {
             await fetchOrCreateChatroom(user.id);
+        } else {
+            loadMessagesFromSessionStorage();
         }
     }
 
     //세션 스토리지에 저장된 채팅 데이터를 가져오는 함수
+    // const loadMessagesFromSessionStorage = () => {
+    //     const storedMessages = sessionStorage.getItem(`chatMessages_${params.chatbotId}`);
+    //     if (storedMessages) {
+    //         setMessages(JSON.parse(storedMessages));
+    //     } else {
+    //         generateBotResponse(`안녕하세요! ${chatbot ? chatbot.name : 'Loading...'}입니다. 무엇을 도와드릴까요?`);
+    //     }
+    // }
     const loadMessagesFromSessionStorage = () => {
         const storedMessages = sessionStorage.getItem(`chatMessages_${params.chatbotId}`);
         if (storedMessages) {
             setMessages(JSON.parse(storedMessages));
-        } else {
-            generateBotResponse(`안녕하세요! ${params.chatbotId}입니다. 무엇을 도와드릴까요?`);
         }
     }
 
-    //비 로그인 시에는 세션 스토리지에 데잍 저저아
+    //비 로그인 시에는 세션 스토리지에 데이터 저장
     const saveMessagesToSessionStorage = (newMessages: any[]) => {
         sessionStorage.setItem(`chatMessages_${params.chatbotId}`, JSON.stringify(newMessages));
     }
+
+    const saveMessage = async (message: any) => {
+        if (isLoggedIn && chatroomId) {
+            await supabase
+                .from('messages')
+                .insert({ chatroom_id: chatroomId, role: message.sender, text: message.text });
+        } else {
+            const newMessages = [...messages, message];
+            saveMessagesToSessionStorage(newMessages);
+        }
+    };
+
+    const loadMessages = async () => {
+        if (isLoggedIn && chatroomId) {
+            await fetchMessages(chatroomId);
+        } else {
+            loadMessagesFromSessionStorage();
+        }
+    };
+
+    useEffect(() => {
+        loadMessages();
+    }, [isLoggedIn, chatroomId]);
 
     //채팅방을 생성하거나 이미 있는 채팅방을 가져오는 함수
     const fetchOrCreateChatroom = async (userId: string) => {
@@ -181,7 +265,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
 
             // 챗봇 응답 생성 (임시)
             setTimeout(() => {
-                const botResponse = `Response from ${params.chatbotId}`;
+                const botResponse = `Response from ${chatbot.name}`;
                 setMessages(prev => [...prev, { text: '', sender: 'bot' }]);
                 generateBotResponse(botResponse);
             }, 500);
@@ -196,7 +280,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
             if (prev[index].sender === 'bot' && index > 0 && prev[index - 1].sender === 'user') {
                 newMessages.push({ text: '', sender: 'bot' });
                 setTimeout(() => {
-                    const botResponse = `New response after deletion from ${params.chatbotId}`;
+                    const botResponse = `New response after deletion from ${chatbot.name}`;
                     generateBotResponse(botResponse);
                 }, 500);
             }
@@ -215,20 +299,28 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
     };
 
 
-    //이 수정 함수는 현재 수파베이스의 데이터에 CRUD 안함. 수정 필요.
-    const handleEditMessage = (index: number, newText: string) => {
+    //이 수정 함수는 현재 수파베이스의 데이터에 CRUD 안함. 수정 필요. - 수정해놓음 결과 확인 필요
+    const handleEditMessage = async (index: number, newText: string) => {
         setMessages(prev => {
             const newMessages = prev.map((msg, i) => i === index ? { ...msg, text: newText } : msg).slice(0, index + 1);
             if (prev[index].sender === 'user' && index < prev.length - 1 && prev[index + 1].sender === 'bot') {
-                // 유저 메시지 편집 후 다음 메시지가 봇 메시지인 경우에만 재생성
                 newMessages.push({ text: '', sender: 'bot' });
                 setTimeout(() => {
-                    const botResponse = `New response after edit from ${params.chatbotId}`;
+                    const botResponse = `New response after edit from ${chatbot?.name}`;
                     generateBotResponse(botResponse);
                 }, 500);
             }
             return newMessages;
         });
+
+        // Supabase 데이터 업데이트
+        if (isLoggedIn && chatroomId) {
+            const messageToUpdate = messages[index];
+            await supabase
+                .from('messages')
+                .update({ text: newText })
+                .match({ chatroom_id: chatroomId, role: messageToUpdate.sender, id: messageToUpdate.id });
+        }
     };
 
     const handleCopyMessage = (text: string) => {
@@ -289,7 +381,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
 
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Label className='text-2xl font-bold text-zinc-800'>{params.chatbotId}</Label>
+                        <Label className='text-2xl font-bold text-zinc-800'>{chatbot ? chatbot.name : 'Loading...'}</Label>
                     </PopoverTrigger>
                     <PopoverContent className="w-80">
                         <div className="grid gap-4">
