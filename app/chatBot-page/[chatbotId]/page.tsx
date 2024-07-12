@@ -102,7 +102,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
     const fetchMessages = async (chatroomId: number) => {
         const { data: messages, error } = await supabase
             .from('messages')
-            .select('*')
+            .select('id, text, role, date')
             .eq('chatroom_id', chatroomId)
             .order('date', { ascending: true });
 
@@ -114,7 +114,8 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
         const formattedMessages = messages.map(msg => ({
             id: msg.id,
             text: msg.text,
-            sender: msg.role
+            sender: msg.role,
+            date: msg.date
         }));
 
         setMessages(formattedMessages);
@@ -127,7 +128,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
 
     const generateWelcomeMessage = () => {
         if (chatbot && messages.length === 0) {
-            generateBotResponse(`안녕하세요! ${chatbot.name}입니다. 무엇을 도와드릴까요?`);
+            setTimeout(() => generateBotResponse(`안녕하세요! ${chatbot.name}입니다. 무엇을 도와드릴까요?`), 500);
         }
     }
 
@@ -138,7 +139,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
             for (let msg of messages) {
                 await supabase
                     .from('messages')
-                    .insert({ chatroom_id: chatroomId, role: msg.sender, text: msg.text })
+                    .insert({ chatroom_id: chatroomId, role: msg.sender, text: msg.text, date: msg.date })
             }
         }
         sessionStorage.removeItem(`chatMessages_${params.chatbotId}`);
@@ -148,7 +149,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
         setIsGenerating(true);
         let response = '';
         const tempMessageId = `temp_${new Date().getTime()}`;
-        setMessages(prev => [...prev, { id: tempMessageId, text: '', sender: 'bot', temporary: true }]);
+        setMessages(prev => [...prev, { id: tempMessageId, text: '', sender: 'bot', temporary: true, date: new Date().toISOString() }]);
         for (let i = 0; i < text.length; i++) {
             response += text[i];
             setMessages(prev => prev.map(msg => msg.id === tempMessageId ? { ...msg, text: response } : msg));
@@ -158,11 +159,15 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
         scrollToBottom();
 
         // Remove temporary message and add the final message
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId).concat({ text: response, sender: 'bot' }));
+        const finalMessage = { id: tempMessageId, text: response, sender: 'bot', date: new Date().toISOString() };
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId).concat(finalMessage));
 
         // Save only the final message to DB
         if (isLoggedIn && chatroomId) {
-            await saveMessage({ text: response, sender: 'bot' });
+            const savedMessage = await saveMessage(finalMessage);
+            if (savedMessage) {
+                setMessages(prev => prev.map(msg => msg.id === tempMessageId ? { ...msg, id: savedMessage.id } : msg));
+            }
         }
     };
 
@@ -186,11 +191,14 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
                 return;
             }
 
-            const newMessage = { text: inputMessage, sender: 'user' };
+            const newMessage = { text: inputMessage, sender: 'user', date: new Date().toISOString() };
             setMessages(prev => [...prev, newMessage]);
             setInputMessage('');
 
-            await saveMessage(newMessage);
+            const savedMessage = await saveMessage(newMessage);
+            if (savedMessage) {
+                setMessages(prev => prev.map(msg => msg === newMessage ? { ...msg, id: savedMessage.id } : msg));
+            }
 
             setTimeout(() => {
                 const botResponse = `Response from ${chatbot.name}`;
@@ -203,7 +211,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
         if (isLoggedIn && chatroomId) {
             const { data, error } = await supabase
                 .from('messages')
-                .insert({ chatroom_id: chatroomId, role: message.sender, text: message.text })
+                .insert({ chatroom_id: chatroomId, role: message.sender, text: message.text, date: message.date })
                 .select()
                 .single();
 
@@ -221,22 +229,37 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
 
     const handleDeleteMessage = async (index: number) => {
         const messageToDelete = messages[index];
+        const messageDateToDelete = messageToDelete.date;
+
+        if (!messageDateToDelete) {
+            console.error('Message date is undefined');
+            return;
+        }
+
+        // Remove the message and subsequent messages from state
         setMessages(prev => {
-            const newMessages = prev.filter((_, i) => i !== index);
+            const newMessages = prev.filter((_, i) => i < index);
             if (!isLoggedIn) {
                 saveMessagesToSessionStorage(newMessages);
             }
             return newMessages;
         });
 
-        if (isLoggedIn && chatroomId && messageToDelete.id) {
-            await supabase
+        if (messageToDelete.id && isLoggedIn && chatroomId) {
+            const { error } = await supabase
                 .from('messages')
                 .delete()
-                .eq('id', messageToDelete.id)
+                .eq('chatroom_id', chatroomId)
+                .gte('date', messageDateToDelete);
+
+            if (error) {
+                console.error('Error deleting messages:', error);
+                return;
+            }
         }
 
-        if (messageToDelete.sender === 'user' && index < messages.length - 1 && messages[index + 1].sender === 'bot') {
+        // Generate new bot response if the deleted message was a bot message
+        if (messageToDelete.sender === 'bot') {
             setTimeout(() => {
                 const botResponse = `New response after deletion from ${chatbot.name}`;
                 generateBotResponse(botResponse);
@@ -245,27 +268,53 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
     };
 
     const handleEditMessage = async (index: number, newText: string) => {
+        const messageToUpdate = messages[index];
+        const messageDateToUpdate = messageToUpdate.date;
+
+        if (!messageDateToUpdate) {
+            console.error('Message date is undefined');
+            return;
+        }
+
+        if (isLoggedIn && chatroomId) {
+            // Delete all subsequent messages in the database
+            const { error: deleteError } = await supabase
+                .from('messages')
+                .delete()
+                .eq('chatroom_id', chatroomId)
+                .gt('date', messageDateToUpdate);
+
+            if (deleteError) {
+                console.error('Error deleting subsequent messages:', deleteError);
+                return;
+            }
+
+            // Update the message text in the database
+            const { error: updateError } = await supabase
+                .from('messages')
+                .update({ text: newText })
+                .eq('id', messageToUpdate.id);
+
+            if (updateError) {
+                console.error('Error updating message:', updateError);
+                return;
+            }
+        }
+
+        // Update the message text in state and remove subsequent messages
         setMessages(prev => {
-            const newMessages = prev.map((msg, i) =>
-                i === index ? { ...msg, text: newText } : msg
-            );
+            const newMessages = prev
+                .map((msg, i) => (i === index ? { ...msg, text: newText } : msg))
+                .filter((msg, i) => i <= index);
+
             if (!isLoggedIn) {
                 saveMessagesToSessionStorage(newMessages);
             }
             return newMessages;
         });
 
-        if (isLoggedIn && chatroomId) {
-            const messageToUpdate = messages[index];
-            if (messageToUpdate.id) {
-                await supabase
-                    .from('messages')
-                    .update({ text: newText })
-                    .eq('id', messageToUpdate.id);
-            }
-        }
-
-        if (messages[index].sender === 'user' && index < messages.length - 1 && messages[index + 1].sender === 'bot') {
+        // Generate new bot response if the edited message was a user message
+        if (messageToUpdate.sender === 'user') {
             setTimeout(() => {
                 const botResponse = `New response after edit from ${chatbot?.name}`;
                 generateBotResponse(botResponse);
@@ -289,13 +338,43 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
         });
     };
 
-    const handleRegenerateMessage = (index: number) => {
+    const handleRegenerateMessage = async (index: number) => {
+        const messageToRegenerate = messages[index];
+        const messageDateToRegenerate = messageToRegenerate.date;
+
+        if (!messageDateToRegenerate) {
+            console.error('Message date is undefined');
+            return;
+        }
+
+        if (isLoggedIn && chatroomId) {
+            // Delete the message and all subsequent messages based on the date in the chat room
+            const { error: deleteError } = await supabase
+                .from('messages')
+                .delete()
+                .eq('chatroom_id', chatroomId)
+                .gte('date', messageDateToRegenerate);
+
+            if (deleteError) {
+                console.error('Error deleting subsequent messages:', deleteError);
+                return;
+            }
+        }
+
+        // Remove the message and subsequent messages from state
         setMessages(prev => {
             const newMessages = prev.slice(0, index);
-            const botResponse = `Regenerated response from ${chatbot.name}`;
-            setTimeout(() => generateBotResponse(botResponse), 500);
+            if (!isLoggedIn) {
+                saveMessagesToSessionStorage(newMessages);
+            }
             return newMessages;
         });
+
+        // Generate a new bot response
+        setTimeout(() => {
+            const botResponse = `Regenerated response from ${chatbot.name}`;
+            generateBotResponse(botResponse);
+        }, 500);
     };
 
     const handleTogglePlay = (index: number) => {
