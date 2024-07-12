@@ -18,8 +18,10 @@ interface MemberData {
 interface ChatbotData {
   name: string;
   made: string;
-  description: string;
+  chat_desc: string;
   imageUrl: string;
+  content_desc : string;
+  ott_link : string;
 }
 
 // ProfileProps 타입 정의
@@ -34,7 +36,7 @@ const Profile = ({ type, data }: ProfileProps) => {
   const imageUrl = isMember ? (data as MemberData).avatarUrl : (data as ChatbotData).imageUrl;
 
   return (
-    <Card className="max-w-3xl mx-auto my-5">
+    <Card className="max-w-3xl mx-auto">
       <CardContent className="flex items-center p-6">
         <Avatar className="h-24 w-24 mr-6">
           <AvatarImage src={imageUrl} alt="Profile" />
@@ -51,9 +53,11 @@ const Profile = ({ type, data }: ProfileProps) => {
           ) : (
             <>
               <p className="text-sm text-gray-600 mb-2">
-                <strong>만들어진 날짜:</strong> {(data as ChatbotData).made}
+                 {(data as ChatbotData).made}
               </p>
-              <p className="text-sm">{(data as ChatbotData).description}</p>
+              <p className="text-sm">{(data as ChatbotData).chat_desc}</p>
+              <p className="text-sm">{(data as ChatbotData).content_desc}</p>
+              <p className="text-sm">{(data as ChatbotData).ott_link}</p>
             </>
           )}
         </div>

@@ -15,8 +15,10 @@ const ChatList = ({ img, name, desc, link }: ChatBotProps) => (
         <Profile type={ProfileType.Chatbot} data={{
             name: name,
             made: '2024.07.06',
-            description: desc,
-            imageUrl: img
+            chat_desc: desc,
+            imageUrl: img,
+            content_desc:'',
+            ott_link:''
         }} />
     </Link>
 );
