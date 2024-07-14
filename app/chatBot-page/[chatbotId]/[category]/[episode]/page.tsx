@@ -58,18 +58,76 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
     // 새로운 useEffect 추가
     useEffect(() => {
-        if (chatbot && !isLoadingMessages && messages.length === 0) {
-            generateWelcomeMessage();
+        if (chatbot && !isLoadingMessages && messages.length === 0 && chatroomId) {
+            checkAndGenerateWelcomeMessage();
         }
-    }, [chatbot, isLoadingMessages, messages.length]);
+    }, [chatbot, isLoadingMessages, messages.length, chatroomId]);
 
-    const generateWelcomeMessage = () => {
-        if (chatbot) {
-            const welcomeMessage = `안녕하세요! ${chatbot.name}입니다. 무엇을 도와드릴까요?`;
-            generateBotResponse(welcomeMessage);
+    const checkAndGenerateWelcomeMessage = async () => {
+        if (isLoggedIn && chatroomId) {
+            const { data, error } = await supabase
+                .from('messages')
+                .select('id, text, date')
+                .eq('chatroom_id', chatroomId)
+                .eq('role', 'assistant')
+                .order('date', { ascending: true })
+                .limit(1);
+
+            if (error) {
+                console.error('Error checking welcome message:', error);
+                return;
+            }
+
+            if (data && data.length === 0) {
+                await generateWelcomeMessage();
+            } else if (data && data.length > 0) {
+                // 이미 존재하는 환영 메시지를 화면에 표시
+                setMessages([{ id: data[0].id, text: data[0].text, sender: 'assistant', date: data[0].date }]);
+                await animateMessage(data[0].text, data[0].id);
+            }
+        } else if (!isLoggedIn) {
+            const storedMessages = sessionStorage.getItem(storageKey);
+            if (!storedMessages) {
+                await generateWelcomeMessage();
+            } else {
+                setMessages(JSON.parse(storedMessages));
+            }
         }
     }
 
+    const generateWelcomeMessage = async () => {
+        if (chatbot) {
+            const welcomeMessage = `안녕하세요! ${chatbot.name}입니다. 무엇을 도와드릴까요?`;
+            const newMessageId = Date.now();
+            const newMessage = { id: newMessageId, text: '', sender: 'assistant', date: new Date().toISOString() };
+
+            setMessages([newMessage]);
+
+            if (isLoggedIn && chatroomId) {
+                const savedMessage = await saveMessage({ ...newMessage, text: welcomeMessage });
+                if (savedMessage) {
+                    setMessages([{ ...savedMessage, text: '' }]);
+                    await animateMessage(welcomeMessage, savedMessage.id);
+                }
+            } else {
+                await animateMessage(welcomeMessage, newMessageId);
+                saveMessagesToSessionStorage([{ ...newMessage, text: welcomeMessage }]);
+            }
+        }
+    }
+
+    const animateMessage = async (text: string, messageId: number | string) => {
+        let animatedText = '';
+        for (let i = 0; i < text.length; i++) {
+            animatedText += text[i];
+            setMessages(prev =>
+                prev.map(msg =>
+                    msg.id === messageId ? { ...msg, text: animatedText } : msg
+                )
+            );
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+    }
 
     const fetchChatbot = async () => {
         const { data, error } = await supabase
@@ -190,40 +248,28 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
     const generateBotResponse = async (text: string) => {
         setIsGenerating(true);
-        const tempMessageId = `temp_${new Date().getTime()}`;
-        const newMessage = { id: tempMessageId, text: '', sender: 'assistant', temporary: true, date: new Date().toISOString() };
+        const newMessageId = Date.now();
+        const newMessage = { id: newMessageId, text: '', sender: 'assistant', date: new Date().toISOString() };
 
         setMessages(prev => [...prev, newMessage]);
 
-        let response = '';
-        for (let i = 0; i < text.length; i++) {
-            response += text[i];
-            setMessages(prev =>
-                prev.map(msg =>
-                    msg.id === tempMessageId ? { ...msg, text: response } : msg
-                )
-            );
-            await new Promise(resolve => setTimeout(resolve, 50));
+        if (isLoggedIn && chatroomId) {
+            const savedMessage = await saveMessage({ ...newMessage, text });
+            if (savedMessage) {
+                setMessages(prev =>
+                    prev.map(msg =>
+                        msg.id === newMessageId ? { ...savedMessage, text: '' } : msg
+                    )
+                );
+                await animateMessage(text, savedMessage.id);
+            }
+        } else {
+            await animateMessage(text, newMessageId);
+            saveMessagesToSessionStorage([...messages, { ...newMessage, text }]);
         }
 
         setIsGenerating(false);
         scrollToBottom();
-
-        const finalMessage = { ...newMessage, text: response, temporary: false };
-        setMessages(prev => {
-            const updatedMessages = prev.map(msg => msg.id === tempMessageId ? finalMessage : msg);
-            if (!isLoggedIn) {
-                saveMessagesToSessionStorage(updatedMessages);
-            }
-            return updatedMessages;
-        });
-
-        if (isLoggedIn && chatroomId) {
-            const savedMessage = await saveMessage(finalMessage);
-            if (savedMessage) {
-                setMessages(prev => prev.map(msg => msg.id === tempMessageId ? { ...msg, id: savedMessage.id } : msg));
-            }
-        }
     };
 
     const scrollToBottom = () => {
@@ -313,8 +359,12 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             }
         }
 
-        // Generate new bot response if the deleted message was a bot message
-        if (messageToDelete.sender === 'assistant') {
+        //메세지를 전부 지웠으면
+        if (index === 0) {
+            // 환영 메시지 다시 생성
+            await generateWelcomeMessage();
+        } else if (messageToDelete.sender === 'assistant') {
+            // assistant의 메시지를 삭제한 경우 새로운 응답 생성
             setTimeout(() => {
                 const botResponse = `New response after deletion from ${chatbot.name}`;
                 generateBotResponse(botResponse);

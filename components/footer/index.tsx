@@ -1,7 +1,7 @@
 
 // 본 결과물은 tailwind로 하기 때문에 그대로 사용하면 됨다.
 const Footer = () => (
-    <div className="text-white body-font bg-zinc-400">
+    <footer className="text-white body-font bg-zinc-400">
         <div className="container px-5 py-8 mx-auto flex items-center flex-row">
             <span className="ml-3 text-xl flex title-font font-medium items-center justify-start text-white flex-wrap">
                 한성대학교 시네마캐릭터
@@ -14,7 +14,7 @@ const Footer = () => (
                 </a>
             </span>
         </div>
-    </div>
+    </footer>
 );
 
 export default Footer;

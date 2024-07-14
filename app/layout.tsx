@@ -20,21 +20,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <Header />
         <main
           className={cn(
-            "min-h-[calc(100vh-92px)] bg-zinc-50 dark:bg-zinc-900 transition-[margin-left] ease-in-out duration-300"
+            "min-h-[calc(100vh-200px)] bg-zinc-50 dark:bg-zinc-900 transition-[margin-left] ease-in-out duration-300"
           )}
         >
-          <Header />
           {children}
         </main>
-        <footer
-          className={cn(
-            "transition-[margin-left] ease-in-out duration-300"
-          )}
-        >
-          <Footer />
-        </footer>
+        <Footer />
       </body>
     </html>
   );
