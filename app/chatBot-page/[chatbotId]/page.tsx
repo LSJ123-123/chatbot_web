@@ -150,7 +150,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
         setIsGenerating(true);
         let response = '';
         const tempMessageId = `temp_${new Date().getTime()}`;
-        setMessages(prev => [...prev, { id: tempMessageId, text: '', sender: 'bot', temporary: true, date: new Date().toISOString() }]);
+        setMessages(prev => [...prev, { id: tempMessageId, text: '', sender: 'assistant', temporary: true, date: new Date().toISOString() }]);
         for (let i = 0; i < text.length; i++) {
             response += text[i];
             setMessages(prev => prev.map(msg => msg.id === tempMessageId ? { ...msg, text: response } : msg));
@@ -160,7 +160,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
         scrollToBottom();
 
         // Remove temporary message and add the final message
-        const finalMessage = { id: tempMessageId, text: response, sender: 'bot', date: new Date().toISOString() };
+        const finalMessage = { id: tempMessageId, text: response, sender: 'assistant', date: new Date().toISOString() };
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId).concat(finalMessage));
 
         // Save only the final message to DB
@@ -260,7 +260,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
         }
 
         // Generate new bot response if the deleted message was a bot message
-        if (messageToDelete.sender === 'bot') {
+        if (messageToDelete.sender === 'assistant') {
             setTimeout(() => {
                 const botResponse = `New response after deletion from ${chatbot.name}`;
                 generateBotResponse(botResponse);
