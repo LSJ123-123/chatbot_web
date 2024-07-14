@@ -13,6 +13,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Profile, { ProfileType } from "@/components/profile";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import LikeButton from '@/components/like';
 
 type Category = {
     id: number;
@@ -51,17 +52,17 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             await fetchCategoriesAndEpisodes();
             await checkLoginStatus();
         };
-    
+
         initializePage();
     }, [params.chatbotId, params.category, params.episode]);
-    
+
     // 새로운 useEffect 추가
     useEffect(() => {
         if (chatbot && !isLoadingMessages && messages.length === 0) {
             generateWelcomeMessage();
         }
     }, [chatbot, isLoadingMessages, messages.length]);
-    
+
     const generateWelcomeMessage = () => {
         if (chatbot) {
             const welcomeMessage = `안녕하세요! ${chatbot.name}입니다. 무엇을 도와드릴까요?`;
@@ -191,23 +192,23 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
         setIsGenerating(true);
         const tempMessageId = `temp_${new Date().getTime()}`;
         const newMessage = { id: tempMessageId, text: '', sender: 'assistant', temporary: true, date: new Date().toISOString() };
-        
+
         setMessages(prev => [...prev, newMessage]);
-    
+
         let response = '';
         for (let i = 0; i < text.length; i++) {
             response += text[i];
-            setMessages(prev => 
-                prev.map(msg => 
+            setMessages(prev =>
+                prev.map(msg =>
                     msg.id === tempMessageId ? { ...msg, text: response } : msg
                 )
             );
             await new Promise(resolve => setTimeout(resolve, 50));
         }
-    
+
         setIsGenerating(false);
         scrollToBottom();
-    
+
         const finalMessage = { ...newMessage, text: response, temporary: false };
         setMessages(prev => {
             const updatedMessages = prev.map(msg => msg.id === tempMessageId ? finalMessage : msg);
@@ -216,7 +217,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             }
             return updatedMessages;
         });
-    
+
         if (isLoggedIn && chatroomId) {
             const savedMessage = await saveMessage(finalMessage);
             if (savedMessage) {
@@ -450,63 +451,70 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
     return (
         <div className='flex flex-col h-[calc(100vh-200px)] max-w-4xl mx-auto p-6 bg-zinc-100 rounded-lg shadow-lg'>
-            <div className='flex items-center mb-6 ml-2'>
+            <div className='flex items-center justify-between mb-6 ml-2'> {/* justify-between을 추가하여 오른쪽으로 정렬 */}
                 <div className='w-14 h-14 bg-zinc-300 rounded-full mr-4'></div>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Label className='text-2xl font-bold text-zinc-800'>{chatbot ? chatbot.name : 'Loading...'}</Label>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-150">
-                        {chatbot && (
-                            <Profile
-                                type={ProfileType.Chatbot}
-                                data={{
-                                    name: chatbot.name,
-                                    made: '',
-                                    chat_desc: '',
-                                    imageUrl: chatbot.img,
-                                    content_desc: chatbot.content_desc,
-                                    ott_link: chatbot.ott_link
-                                }}
-                            />
-                        )}
-                    </PopoverContent>
-                </Popover>
+
+                <div className='flex flex-grow'> {/* Select 컴포넌트를 포함하는 Flex 컨테이너 */}
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Label className='text-2xl font-bold text-zinc-800'>{chatbot ? chatbot.name : '로딩 중...'}</Label>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-150">
+                            {chatbot && (
+                                <Profile
+                                    type={ProfileType.Chatbot}
+                                    data={{
+                                        name: chatbot.name,
+                                        made: '',
+                                        chat_desc: '',
+                                        imageUrl: chatbot.img,
+                                        content_desc: chatbot.content_desc,
+                                        ott_link: chatbot.ott_link
+                                    }}
+                                />
+                            )}
+                            <LikeButton />
+                        </PopoverContent>
+                    </Popover>
+                    <LikeButton />
+                    <div className='flex ml-auto'> {/* ml-auto를 사용하여 오른쪽으로 밀어줍니다 */}
+                        <Select
+                            value={selectedCategory}
+                            onValueChange={(value) => {
+                                setSelectedCategory(value);
+                                router.push(`/chatBot-page/${params.chatbotId}/${value}/${selectedEpisode}`);
+                            }}
+                        >
+                            <SelectTrigger className="w-[180px] ml-4">
+                                <SelectValue>{categories.find(c => c.id.toString() === selectedCategory)?.name || "카테고리 선택"}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {categories.map((category) => (
+                                    <SelectItem key={category.id} value={category.id.toString()}>{category.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <Select
+                            value={selectedEpisode}
+                            onValueChange={(value) => {
+                                setSelectedEpisode(value);
+                                router.push(`/chatBot-page/${params.chatbotId}/${selectedCategory}/${value}`);
+                            }}
+                        >
+                            <SelectTrigger className="w-[80px] ml-4">
+                                <SelectValue>{episodes.find(e => e.id.toString() === selectedEpisode)?.episode_number + '회' || "회차 선택"}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {episodes.map((episode) => (
+                                    <SelectItem key={episode.id} value={episode.id.toString()}>{episode.episode_number}회</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
             </div>
-            <div className='flex'>
-                <Select
-                    value={selectedCategory}
-                    onValueChange={(value) => {
-                        setSelectedCategory(value);
-                        router.push(`/chatBot-page/${params.chatbotId}/${value}/${selectedEpisode}`);
-                    }}
-                >
-                    <SelectTrigger className="w-[180px] ml-4">
-                        <SelectValue>{categories.find(c => c.id.toString() === selectedCategory)?.name || "카테고리 선택"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                        {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id.toString()}>{category.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <Select
-                    value={selectedEpisode}
-                    onValueChange={(value) => {
-                        setSelectedEpisode(value);
-                        router.push(`/chatBot-page/${params.chatbotId}/${selectedCategory}/${value}`);
-                    }}
-                >
-                    <SelectTrigger className="w-[180px] ml-4">
-                        <SelectValue>{episodes.find(e => e.id.toString() === selectedEpisode)?.episode_number + '회' || "회차 선택"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                        {episodes.map((episode) => (
-                            <SelectItem key={episode.id} value={episode.id.toString()}>{episode.episode_number}회</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+
             <ScrollArea className='flex-grow mb-6 p-6 bg-white rounded-lg shadow-inner'>
                 <div className='space-y-4'>
                     {messages.map((message, index) => (
