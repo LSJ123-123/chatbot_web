@@ -1,4 +1,4 @@
-import { MenuIcon, Home, Clock, LogOut } from "lucide-react";
+import { MenuIcon, Home, Clock, PanelLeftClose } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -12,16 +12,58 @@ import {
     SheetDescription,
 } from "@/components/ui/sheet";
 import Profile, { ProfileType } from "../profile";
+import { createClient } from "@/utils/supabase/server";
 
-const recentChatbots = [
-    { id: 'chatbot1', name: 'Chatbot 1' },
-    { id: 'chatbot2', name: 'Chatbot 2' },
-    { id: 'chatbot3', name: 'Chatbot 3' },
-    { id: 'chatbot4', name: 'Chatbot 4' },
-    { id: 'chatbot5', name: 'Chatbot 5' },
-];
+const fetchRecentChatbots = async () => {
+    "use server";
 
-const SheetMenu = () => {
+    const supabase = createClient();
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+        return { recentChatbots: [], user: null };
+    }
+
+    const user = userData.user;
+
+    const { data, error } = await supabase
+        .from('chatrooms')
+        .select('id, cuid, category, episode')
+        .eq('uuid', user.id) // 유저의 UUID로 필터링
+        .order('last_date', { ascending: true })
+        .limit(5);
+
+    if (error) {
+        console.error('Error fetching recent chatrooms:', error);
+        return { recentChatbots: [], user };
+    }
+
+    const { data: chatbots, error: chatbotError } = await supabase
+        .from('chatbots')
+        .select('id, name')
+        .in('id', data.map((chatroom) => chatroom.cuid));
+
+    if (chatbotError) {
+        console.error('Error fetching chatbots:', chatbotError);
+        return { recentChatbots: [], user };
+    }
+
+    // 데이터에 이름을 추가
+    const recentChatbots = data.map((chatroom) => {
+        const bot = chatbots.find((bot) => bot.id === chatroom.cuid);
+        return {
+            ...chatroom,
+            name: bot?.name || 'Unknown',
+        };
+    });
+
+    return { recentChatbots, user };
+};
+
+const SheetMenu = async () => {
+    const { recentChatbots, user } = await fetchRecentChatbots();
+
     return (
         <Sheet>
             <SheetTrigger asChild>
@@ -55,39 +97,47 @@ const SheetMenu = () => {
                                 Recent
                             </h3>
                             <ul className="space-y-3">
-                                {recentChatbots.map((bot) => (
-                                    <li key={bot.id}>
-                                        <Link href={`/chatBot-page/${bot.id}`} className="text-base text-gray-700 hover:text-gray-900 transition-colors">
-                                            {bot.name}
-                                        </Link>
+                                {user ? (
+                                    recentChatbots.map((bot) => (
+                                        <li key={bot.id}>
+                                            <Link href={`/chatBot-page/${bot.cuid}/${bot.category}/${bot.episode}`} className="text-base text-gray-700 hover:text-gray-900 transition-colors">
+                                                {bot.name}
+                                            </Link>
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li>
+                                        <span className="text-base text-gray-700">로그인 후에 이용 가능합니다.</span>
                                     </li>
-                                ))}
+                                )}
                             </ul>
                         </div>
                     </div>
                 </div>
 
                 <div className="mt-auto border-t border-gray-300 bg-white flex-shrink-0">
-                    <div className="p-6">
-                        <Profile
-                            type={ProfileType.Member}
-                            data={{
-                                username: "John Doe",
-                                email: "abc@tes.com",
-                                avatarUrl: "https://randomuser.me/api/portraits",
-                            }}
-                        />
-                    </div>
+                    {user && (
+                        <div className="p-6">
+                            <Profile
+                                type={ProfileType.Member}
+                                data={{
+                                    username: user.user_metadata.full_name || "User",
+                                    email: user.email || '',
+                                    avatarUrl: "https://randomuser.me/api/portraits",
+                                }}
+                            />
+                        </div>
+                    )}
                     <SheetClose asChild>
                         <Button variant="ghost" className="w-full py-4 flex items-center justify-center space-x-2 text-base font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-900">
-                            <LogOut size={20} />
-                            <span>로그아웃</span>
+                            <PanelLeftClose />
+                            <span>메뉴 닫기</span>
                         </Button>
                     </SheetClose>
                 </div>
             </SheetContent>
         </Sheet>
     );
-}
+};
 
 export default SheetMenu;
