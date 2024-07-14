@@ -12,8 +12,20 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Profile, { ProfileType } from "@/components/profile";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function ChatBotPage({ params }: { params: { chatbotId: string } }) {
+type Category = {
+    id: number;
+    name: string;
+};
+
+type Episode = {
+    id: number;
+    chatbot_id: number;
+    episode_number: number;
+};
+
+export default function ChatBotPage({ params }: { params: { chatbotId: string, category: string, episode: string } }) {
     const [chatbot, setChatbot] = useState<any>(null);
     const [messages, setMessages] = useState<any[]>([]);
     const [inputMessage, setInputMessage] = useState<string>('');
@@ -22,20 +34,41 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
     const [chatroomId, setChatroomId] = useState<number | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
     const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(true);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [episodes, setEpisodes] = useState<Episode[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState(params.category);
+    const [selectedEpisode, setSelectedEpisode] = useState(params.episode);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const supabase = createClient()
     const router = useRouter()
+    const storageKey = `chatMessages_${params.chatbotId}_${params.category}_${params.episode}`;
 
     useEffect(() => {
         const initializePage = async () => {
             await fetchChatbot();
+            await fetchCategoriesAndEpisodes();
             await checkLoginStatus();
         };
-
+    
         initializePage();
-    }, [params.chatbotId]);
+    }, [params.chatbotId, params.category, params.episode]);
+    
+    // 새로운 useEffect 추가
+    useEffect(() => {
+        if (chatbot && !isLoadingMessages && messages.length === 0) {
+            generateWelcomeMessage();
+        }
+    }, [chatbot, isLoadingMessages, messages.length]);
+    
+    const generateWelcomeMessage = () => {
+        if (chatbot) {
+            const welcomeMessage = `안녕하세요! ${chatbot.name}입니다. 무엇을 도와드릴까요?`;
+            generateBotResponse(welcomeMessage);
+        }
+    }
+
 
     const fetchChatbot = async () => {
         const { data, error } = await supabase
@@ -58,24 +91,53 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
         if (user) {
             await fetchOrCreateChatroom(user.id);
         } else {
-            loadMessagesFromSessionStorage();
             setIsLoadingMessages(false);
+            loadMessagesFromSessionStorage();
         }
+    }
+
+    const fetchCategoriesAndEpisodes = async () => {
+        const { data: categoriesData, error: categoriesError } = await supabase
+            .from('chatbot_categories')
+            .select('categories(id, name)')
+            .eq('chatbot_id', params.chatbotId);
+
+        if (categoriesError) {
+            console.error('Error fetching categories:', categoriesError);
+        } else {
+            // 타입 단언을 사용하여 타입 오류 해결
+            setCategories(categoriesData.map((item: any) => item.categories) as Category[]);
+        }
+
+        const { data: episodesData, error: episodesError } = await supabase
+            .from('episodes')
+            .select('*')
+            .eq('chatbot_id', params.chatbotId)
+            .order('episode_number', { ascending: true });
+
+        if (episodesError) {
+            console.error('Error fetching episodes:', episodesError);
+        } else {
+            // 타입 단언을 사용하여 타입 오류 해결
+            setEpisodes(episodesData as Episode[]);
+        }
+    };
+
+    const saveMessagesToSessionStorage = (newMessages: any[]) => {
+        sessionStorage.setItem(storageKey, JSON.stringify(newMessages));
     }
 
     const loadMessagesFromSessionStorage = () => {
-        const storedMessages = sessionStorage.getItem(`chatMessages_${params.chatbotId}`);
+        const storedMessages = sessionStorage.getItem(storageKey);
         if (storedMessages) {
             setMessages(JSON.parse(storedMessages));
+        } else {
+            generateWelcomeMessage();
         }
     }
 
-    const saveMessagesToSessionStorage = (newMessages: any[]) => {
-        sessionStorage.setItem(`chatMessages_${params.chatbotId}`, JSON.stringify(newMessages));
-    }
-
-    const saveChatroomId = (id: number) => localStorage.setItem(`chatroomId_${params.chatbotId}`, id.toString());
-    const loadChatroomId = () => Number(localStorage.getItem(`chatroomId_${params.chatbotId}`));
+    const saveChatroomId = (id: number) => localStorage.setItem(`chatroomId_${params.chatbotId}_${params.category}_${params.episode}`, id.toString());
+    const loadChatroomId = () => Number(localStorage.getItem(`chatroomId_${params.chatbotId}_${params.category}_${params.episode}`));
 
     const fetchOrCreateChatroom = async (userId: string) => {
         const existingId = loadChatroomId();
@@ -87,7 +149,9 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
 
         const { data: newChatroom, error: insertError } = await supabase.rpc('create_unique_chatroom', {
             p_uuid: userId,
-            p_cuid: params.chatbotId
+            p_cuid: params.chatbotId,
+            p_category: params.category,
+            p_episode: params.episode
         });
 
         if (newChatroom) {
@@ -121,49 +185,38 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
 
         setMessages(formattedMessages);
         setIsLoadingMessages(false);
-
-        if (formattedMessages.length === 0) {
-            generateWelcomeMessage();
-        }
-    }
-
-    const generateWelcomeMessage = () => {
-        if (chatbot && messages.length === 0) {
-            setTimeout(() => generateBotResponse(`안녕하세요! ${chatbot.name}입니다. 무엇을 도와드릴까요?`), 500);
-        }
-    }
-
-    const uploadSessionStorageMessages = async (chatroomId: number) => {
-        const storedMessages = sessionStorage.getItem(`chatMessages_${params.chatbotId}`);
-        if (storedMessages) {
-            const messages = JSON.parse(storedMessages);
-            for (let msg of messages) {
-                await supabase
-                    .from('messages')
-                    .insert({ chatroom_id: chatroomId, role: msg.sender, text: msg.text, date: msg.date })
-            }
-        }
-        sessionStorage.removeItem(`chatMessages_${params.chatbotId}`);
     }
 
     const generateBotResponse = async (text: string) => {
         setIsGenerating(true);
-        let response = '';
         const tempMessageId = `temp_${new Date().getTime()}`;
-        setMessages(prev => [...prev, { id: tempMessageId, text: '', sender: 'assistant', temporary: true, date: new Date().toISOString() }]);
+        const newMessage = { id: tempMessageId, text: '', sender: 'assistant', temporary: true, date: new Date().toISOString() };
+        
+        setMessages(prev => [...prev, newMessage]);
+    
+        let response = '';
         for (let i = 0; i < text.length; i++) {
             response += text[i];
-            setMessages(prev => prev.map(msg => msg.id === tempMessageId ? { ...msg, text: response } : msg));
+            setMessages(prev => 
+                prev.map(msg => 
+                    msg.id === tempMessageId ? { ...msg, text: response } : msg
+                )
+            );
             await new Promise(resolve => setTimeout(resolve, 50));
         }
+    
         setIsGenerating(false);
         scrollToBottom();
-
-        // Remove temporary message and add the final message
-        const finalMessage = { id: tempMessageId, text: response, sender: 'assistant', date: new Date().toISOString() };
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId).concat(finalMessage));
-
-        // Save only the final message to DB
+    
+        const finalMessage = { ...newMessage, text: response, temporary: false };
+        setMessages(prev => {
+            const updatedMessages = prev.map(msg => msg.id === tempMessageId ? finalMessage : msg);
+            if (!isLoggedIn) {
+                saveMessagesToSessionStorage(updatedMessages);
+            }
+            return updatedMessages;
+        });
+    
         if (isLoggedIn && chatroomId) {
             const savedMessage = await saveMessage(finalMessage);
             if (savedMessage) {
@@ -395,12 +448,6 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
         }
     };
 
-    useEffect(() => {
-        if (!isLoadingMessages && messages.length === 0 && chatbot) {
-            generateWelcomeMessage();
-        }
-    }, [chatbot, isLoadingMessages]);
-
     return (
         <div className='flex flex-col h-[calc(100vh-200px)] max-w-4xl mx-auto p-6 bg-zinc-100 rounded-lg shadow-lg'>
             <div className='flex items-center mb-6 ml-2'>
@@ -425,6 +472,40 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string } 
                         )}
                     </PopoverContent>
                 </Popover>
+            </div>
+            <div className='flex'>
+                <Select
+                    value={selectedCategory}
+                    onValueChange={(value) => {
+                        setSelectedCategory(value);
+                        router.push(`/chatBot-page/${params.chatbotId}/${value}/${selectedEpisode}`);
+                    }}
+                >
+                    <SelectTrigger className="w-[180px] ml-4">
+                        <SelectValue>{categories.find(c => c.id.toString() === selectedCategory)?.name || "카테고리 선택"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id.toString()}>{category.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Select
+                    value={selectedEpisode}
+                    onValueChange={(value) => {
+                        setSelectedEpisode(value);
+                        router.push(`/chatBot-page/${params.chatbotId}/${selectedCategory}/${value}`);
+                    }}
+                >
+                    <SelectTrigger className="w-[180px] ml-4">
+                        <SelectValue>{episodes.find(e => e.id.toString() === selectedEpisode)?.episode_number + '회' || "회차 선택"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {episodes.map((episode) => (
+                            <SelectItem key={episode.id} value={episode.id.toString()}>{episode.episode_number}회</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
             <ScrollArea className='flex-grow mb-6 p-6 bg-white rounded-lg shadow-inner'>
                 <div className='space-y-4'>
