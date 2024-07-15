@@ -13,7 +13,6 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ChatbotDetailData from '@/components/chatbot-detail';
-import LikeButton from '@/components/like';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 type Category = {
