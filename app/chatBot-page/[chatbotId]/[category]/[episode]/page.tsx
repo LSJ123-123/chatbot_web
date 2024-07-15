@@ -145,10 +145,10 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
     // 새로운 useEffect 추가
     useEffect(() => {
-        if (chatbot && !isLoadingMessages && messages.length === 0) {
+        if (chatbot && !isLoadingMessages && messages.length === 0 && chatroomId) {
             checkAndGenerateWelcomeMessage();
         }
-    }, [chatbot, isLoadingMessages, messages.length]);
+    }, [chatbot, isLoadingMessages, messages.length, chatroomId]);
 
     const checkAndGenerateWelcomeMessage = async () => {
         if (isLoggedIn && chatroomId) {
@@ -156,7 +156,6 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                 .from('messages')
                 .select('id, text, date')
                 .eq('chatroom_id', chatroomId)
-                .eq('role', 'assistant')
                 .order('date', { ascending: true })
                 .limit(1);
 
@@ -165,9 +164,9 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                 return;
             }
 
-            if (data && data.length === 0) {
+            if (!data || data.length === 0) {
                 await generateWelcomeMessage();
-            } else if (data && data.length > 0) {
+            } else {
                 setMessages([{ id: data[0].id, text: data[0].text, sender: 'assistant', date: data[0].date }]);
             }
         } else if (!isLoggedIn) {
@@ -306,14 +305,14 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             await fetchMessages(existingId);
             return;
         }
-
+    
         const { data: newChatroom, error: insertError } = await supabase.rpc('create_unique_chatroom', {
             p_uuid: userId,
             p_cuid: params.chatbotId,
             p_category: params.category,
             p_episode: params.episode
         });
-
+    
         if (newChatroom) {
             const newChatroomId = newChatroom[0].chatroom_id;
             saveChatroomId(newChatroomId);
@@ -330,22 +329,26 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             .select('id, text, role, date')
             .eq('chatroom_id', chatroomId)
             .order('date', { ascending: true });
-
+    
         if (error) {
             console.error('Error fetching messages:', error);
             return;
         }
-
+    
         const formattedMessages = messages.map(msg => ({
             id: msg.id,
             text: msg.text,
             sender: msg.role,
             date: msg.date
         }));
-
+    
         setMessages(formattedMessages);
         setIsLoadingMessages(false);
-    }
+    
+        if (formattedMessages.length === 0) {
+            await generateWelcomeMessage();
+        }
+    };
 
     const generateBotResponse = async (text: string) => {
         setIsGenerating(true);
@@ -598,8 +601,6 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                                     content_desc={chatbot.content_desc}
                                     img={chatbot.img}
                                     ott_link={chatbot.ott_link}
-                                    likes={chatbot.likes}
-                                    msg_count={chatbot.msg_count}
                                 />
                             )}
 

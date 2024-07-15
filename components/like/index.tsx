@@ -1,22 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart } from "lucide-react";
-import ChatbotDetailData from '@/components/chatbot-detail';
+import { createClient } from '@/utils/supabase/client';
 
 interface LikeButtonProps {
+    chatbotId: number;
     likes: number;
 }
 
-const LikeButton = ({ likes }: LikeButtonProps) => {
+const LikeButton = ({ chatbotId, likes }: LikeButtonProps) => {
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(likes);
+    const supabase = createClient();
 
-    const toggleLike = () => {
-        if (!liked) {
-            setLikeCount(likeCount + 1);
-        } else {
-            setLikeCount(likeCount - 1);
+    useEffect(() => {
+        setLikeCount(likes);
+        checkLikeStatus();
+    }, [likes, chatbotId]);
+
+    const checkLikeStatus = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data, error } = await supabase.rpc('check_chatbot_like', {
+                p_user_id: user.id,
+                p_chatbot_id: chatbotId
+            });
+            if (error) console.error('Error checking like status:', error);
+            else setLiked(data);
         }
-        setLiked(!liked);
+    };
+
+    const toggleLike = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            alert('Please log in to like this chatbot.');
+            return;
+        }
+
+        const { data, error } = await supabase.rpc('toggle_chatbot_like', {
+            p_user_id: user.id,
+            p_chatbot_id: chatbotId
+        });
+
+        if (error) console.error('Error toggling like:', error);
+        else {
+            setLiked(data);
+            setLikeCount(prev => data ? prev + 1 : prev - 1);
+        }
     };
 
     return (

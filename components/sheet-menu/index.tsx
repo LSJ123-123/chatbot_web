@@ -31,7 +31,7 @@ const fetchRecentChatbots = async () => {
         .from('chatrooms')
         .select('id, cuid, category, episode')
         .eq('uuid', user.id) // 유저의 UUID로 필터링
-        .order('last_date', { ascending: true })
+        .order('last_date', { ascending: false })
         .limit(5);
 
     if (error) {
