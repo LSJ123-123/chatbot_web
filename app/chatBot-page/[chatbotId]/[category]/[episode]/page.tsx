@@ -496,6 +496,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
     const handleDeleteMessage = async (index: number) => {
         const messageToDelete = messages[index];
+        const newMessages = messages.slice(0, index);  // 삭제할 메시지 이전의 메시지만 유지
 
         if (isLoggedIn && chatroomId) {
             // 선택한 메시지와 그 이후의 모든 메시지 삭제
@@ -509,37 +510,48 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                 console.error('Error deleting messages:', error);
                 return;
             }
-            // Realtime 이벤트가 삭제를 처리할 것이므로 여기서 상태를 직접 업데이트하지 않습니다.
-        } else {
-            // 비로그인 상태에서는 직접 상태를 업데이트합니다.
-            const newMessages = messages.slice(0, index);
-            setMessages(newMessages);
+        }
+
+        setMessages(newMessages);
+        if (!isLoggedIn) {
             saveMessagesToSessionStorage(newMessages);
         }
 
         if (index === 0) {
             return;
         } else if (messageToDelete.sender === 'assistant') {
-            await generateBotResponse();
+            // 삭제된 메시지를 제외하고 봇 응답 생성
+            await generateBotResponse(newMessages);
         }
     };
 
     const handleEditMessage = async (index: number, newText: string) => {
         const messageToUpdate = messages[index];
+        const newMessages = messages.slice(0, index + 1);  // 수정된 메시지까지만 유지
+        newMessages[index] = { ...messageToUpdate, text: newText };  // 수정된 메시지 반영
 
         if (isLoggedIn && chatroomId) {
+            // 수정된 메시지 이후의 모든 메시지 삭제
+            await supabase
+                .from('messages')
+                .delete()
+                .eq('chatroom_id', chatroomId)
+                .gt('date', messageToUpdate.date);
+
+            // 메시지 업데이트
             await supabase
                 .from('messages')
                 .update({ text: newText })
                 .eq('id', messageToUpdate.id);
-        } else {
-            setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, text: newText } : msg));
-            saveMessagesToSessionStorage(messages.map((msg, i) => i === index ? { ...msg, text: newText } : msg));
         }
 
-        if (messageToUpdate.sender === 'user') {
-            await generateBotResponse();
+        setMessages(newMessages);  // 상태 업데이트
+        if (!isLoggedIn) {
+            saveMessagesToSessionStorage(newMessages);
         }
+
+        // 수정된 메시지까지만 포함하여 봇 응답 생성
+        await generateBotResponse(newMessages);
     };
 
     const handleCopyMessage = (text: string) => {
