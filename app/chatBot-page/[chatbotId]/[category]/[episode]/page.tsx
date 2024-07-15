@@ -48,7 +48,6 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
     const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(true);
     const [categories, setCategories] = useState<Category[]>([]);
     const [episodes, setEpisodes] = useState<Episode[]>([]);
-    const [detailData, setDetailData] = useState<DetailData[]>([]);
     const [selectedCategory, setSelectedCategory] = useState(params.category);
     const [selectedEpisode, setSelectedEpisode] = useState(params.episode);
 
@@ -115,6 +114,11 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             date: payload.new.date
         };
 
+        // 이미 애니메이션 중인 메시지는 무시합니다.
+        if (newMessage.id === animatingMessageId) {
+            return;
+        }
+
         if (newMessage.sender === 'assistant') {
             setAnimatingMessageId(newMessage.id);
             setAnimatingText('');
@@ -145,10 +149,10 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
     // 새로운 useEffect 추가
     useEffect(() => {
-        if (chatbot && !isLoadingMessages && messages.length === 0 && chatroomId) {
+        if (chatbot && !isLoadingMessages && messages.length === 0) {
             checkAndGenerateWelcomeMessage();
         }
-    }, [chatbot, isLoadingMessages, messages.length, chatroomId]);
+    }, [chatbot, isLoadingMessages, messages.length]);
 
     const checkAndGenerateWelcomeMessage = async () => {
         if (isLoggedIn && chatroomId) {
@@ -182,7 +186,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
     const generateWelcomeMessage = async () => {
         if (chatbot) {
             const welcomeMessage = `안녕하세요! ${chatbot.name}입니다. 무엇을 도와드릴까요?`;
-
+    
             if (isLoggedIn && chatroomId) {
                 const { data, error } = await supabase
                     .from('messages')
@@ -194,17 +198,23 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                     })
                     .select()
                     .single();
-
+    
                 if (error) {
                     console.error('Error generating welcome message:', error);
                     return;
                 }
+    
+                // Realtime 이벤트가 처리되기를 기다리지 않고 직접 상태를 업데이트합니다.
+                const newMessage = { id: data.id, text: data.text, sender: data.role, date: data.date };
+                setAnimatingMessageId(data.id);
+                setAnimatingText('');
+                await animateMessage(newMessage.text, newMessage.id);
             } else {
                 const newMessage = { id: Date.now().toString(), text: welcomeMessage, sender: 'assistant', date: new Date().toISOString() };
                 setAnimatingMessageId(newMessage.id);
                 setAnimatingText('');
                 await animateMessage(welcomeMessage, newMessage.id);
-                setMessages([newMessage]);  // 이 줄을 수정
+                setMessages([newMessage]);
                 saveMessagesToSessionStorage([newMessage]);
             }
         }
@@ -218,7 +228,14 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             setAnimatingText(animatedText);
             await new Promise(resolve => setTimeout(resolve, 50));
         }
-        setMessages(prev => [...prev, { id: messageId, text, sender: 'assistant', date: new Date().toISOString() }]);
+        setMessages(prev => {
+            // 이미 메시지가 있다면 추가하지 않습니다.
+            if (prev.some(msg => msg.id === messageId)) {
+                return prev;
+            }
+            const newMessage = { id: messageId, text, sender: 'assistant', date: new Date().toISOString() };
+            return [...prev, newMessage];
+        });
         setAnimatingMessageId(null);
         setAnimatingText('');
         setIsAnimating(false);
@@ -239,8 +256,6 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
         if (data) {
             setChatbot(data as DetailData);
-            // Chatbot의 상세 정보를 다른 state 변수에 저장할 수 있습니다.
-            setDetailData([data as DetailData]);
         }
     };
 
@@ -305,14 +320,14 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             await fetchMessages(existingId);
             return;
         }
-    
+
         const { data: newChatroom, error: insertError } = await supabase.rpc('create_unique_chatroom', {
             p_uuid: userId,
             p_cuid: params.chatbotId,
             p_category: params.category,
             p_episode: params.episode
         });
-    
+
         if (newChatroom) {
             const newChatroomId = newChatroom[0].chatroom_id;
             saveChatroomId(newChatroomId);
@@ -329,25 +344,21 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             .select('id, text, role, date')
             .eq('chatroom_id', chatroomId)
             .order('date', { ascending: true });
-    
+
         if (error) {
             console.error('Error fetching messages:', error);
             return;
         }
-    
+
         const formattedMessages = messages.map(msg => ({
             id: msg.id,
             text: msg.text,
             sender: msg.role,
             date: msg.date
         }));
-    
+
         setMessages(formattedMessages);
         setIsLoadingMessages(false);
-    
-        if (formattedMessages.length === 0) {
-            await generateWelcomeMessage();
-        }
     };
 
     const generateBotResponse = async (text: string) => {
@@ -443,26 +454,6 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             const botResponse = `Response from ${chatbot.name}`;
             generateBotResponse(botResponse);
         }, 500);
-    };
-
-    const saveMessage = async (message: any) => {
-        if (isLoggedIn && chatroomId) {
-            const { data, error } = await supabase
-                .from('messages')
-                .insert({ chatroom_id: chatroomId, role: message.sender, text: message.text, date: message.date })
-                .select()
-                .single();
-
-            if (error) {
-                console.error('Error saving message:', error);
-                return null;
-            }
-            return data;
-        } else {
-            const newMessages = [...messages, message];
-            saveMessagesToSessionStorage(newMessages);
-            return message;
-        }
     };
 
     const handleDeleteMessage = async (index: number) => {
