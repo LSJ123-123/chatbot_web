@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ChatbotDetailData from '@/components/chatbot-detail';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { generateOpenAIResponse } from './actions';
 
 type Category = {
     id: number;
@@ -186,7 +187,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
     const generateWelcomeMessage = async () => {
         if (chatbot) {
             const welcomeMessage = `안녕하세요! ${chatbot.name}입니다. 무엇을 도와드릴까요?`;
-    
+
             if (isLoggedIn && chatroomId) {
                 const { data, error } = await supabase
                     .from('messages')
@@ -198,12 +199,12 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                     })
                     .select()
                     .single();
-    
+
                 if (error) {
                     console.error('Error generating welcome message:', error);
                     return;
                 }
-    
+
                 // Realtime 이벤트가 처리되기를 기다리지 않고 직접 상태를 업데이트합니다.
                 const newMessage = { id: data.id, text: data.text, sender: data.role, date: data.date };
                 setAnimatingMessageId(data.id);
@@ -361,37 +362,77 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
         setIsLoadingMessages(false);
     };
 
-    const generateBotResponse = async (text: string) => {
+    const generateBotResponse = async (currentMessages = messages) => {
         setIsGenerating(true);
-        const newMessage = {
-            id: Date.now().toString(),
-            text,
-            sender: 'assistant',
-            date: new Date().toISOString()
-        };
 
-        if (isLoggedIn && chatroomId) {
-            await supabase
-                .from('messages')
-                .insert({
-                    chatroom_id: chatroomId,
-                    role: newMessage.sender,
-                    text: newMessage.text,
-                    date: newMessage.date
+        const newMessageId = Date.now().toString();
+
+        setAnimatingMessageId(newMessageId);
+        setAnimatingText('');
+        try {
+            // 시스템 프롬프트 생성
+            const systemPrompt = `너는 ${chatbot.name}이다. ${chatbot.name}처럼 생각하고 말해야 한다.
+    너는 ${categories.find(c => c.id.toString() === selectedCategory)?.name}하게 말해야한다.`;
+            ///너는 현재 에피소드로는 ${episodes.find(e => e.id.toString() === selectedEpisode)?.episode_number}회차까지의 기억을 가지고 있다.
+
+            // 전체 메시지 배열 생성
+            const fullMessages = [
+                { role: 'system', content: systemPrompt },
+                ...currentMessages.map(msg => ({
+                    role: msg.sender === 'user' ? 'user' : 'assistant',
+                    content: msg.text
+                }))
+            ];
+
+            console.log('Full messages:', fullMessages);
+
+            // OpenAI API 호출
+            const botResponse = await generateOpenAIResponse(fullMessages, params.chatbotId);
+
+            if (!botResponse) {
+                throw new Error('봇 응답을 생성하는 데 실패했습니다.');
+            }
+
+            console.log('Bot response:', botResponse);
+
+            const newMessage = {
+                id: newMessageId,
+                text: botResponse,
+                sender: 'assistant',
+                date: new Date().toISOString()
+            };
+
+            if (isLoggedIn && chatroomId) {
+                await supabase
+                    .from('messages')
+                    .insert({
+                        chatroom_id: chatroomId,
+                        role: newMessage.sender,
+                        text: newMessage.text,
+                        date: newMessage.date
+                    });
+                // 실시간 이벤트가 이 메시지를 처리할 것입니다.
+                setIsGenerating(false);
+            } else {
+                setIsGenerating(false);
+                setAnimatingMessageId(newMessage.id);
+                setAnimatingText('');
+                await animateMessage(botResponse, newMessage.id);
+
+                setMessages(prevMessages => {
+                    const updatedMessages = [...prevMessages, newMessage];
+                    saveMessagesToSessionStorage(updatedMessages);
+                    return updatedMessages;
                 });
-            // 실시간 이벤트가 이 메시지를 처리할 것입니다.
-        } else {
-            setAnimatingMessageId(newMessage.id);
-            setAnimatingText('');
-            await animateMessage(text, newMessage.id);
-
-            setMessages(prevMessages => {
-                saveMessagesToSessionStorage(prevMessages);
-                return prevMessages;
+            }
+        } catch (error) {
+            console.error('Error generating bot response:', error);
+            toast({
+                title: "오류 발생",
+                description: "응답 생성 중 오류가 발생했습니다. 다시 시도해 주세요.",
+                variant: "destructive",
             });
         }
-
-        setIsGenerating(false);
     };
 
     const scrollToBottom = () => {
@@ -449,11 +490,8 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             });
         }
 
-        // 봇 응답 생성
-        setTimeout(() => {
-            const botResponse = `Response from ${chatbot.name}`;
-            generateBotResponse(botResponse);
-        }, 500);
+        // 봇 응답 생성, 하지만 지연을 둬서 현재 보낸 메세지가 뜨게 함
+        setTimeout(() => generateBotResponse([...messages, newMessage]), 500);
     };
 
     const handleDeleteMessage = async (index: number) => {
@@ -481,12 +519,8 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
         if (index === 0) {
             return;
-        } else if (messageToDelete.sender === 'assistant' && !isLoggedIn) {
-            // 비로그인 상태에서만 새 응답을 즉시 생성합니다.
-            setTimeout(() => {
-                const botResponse = `New response after deletion from ${chatbot.name}`;
-                generateBotResponse(botResponse);
-            }, 500);
+        } else if (messageToDelete.sender === 'assistant') {
+            await generateBotResponse();
         }
     };
 
@@ -504,10 +538,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
         }
 
         if (messageToUpdate.sender === 'user') {
-            setTimeout(() => {
-                const botResponse = `New response after edit from ${chatbot?.name}`;
-                generateBotResponse(botResponse);
-            }, 500);
+            await generateBotResponse();
         }
     };
 
@@ -528,6 +559,9 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
     };
 
     const handleRegenerateMessage = async (index: number) => {
+        const newMessages = messages.slice(0, index);
+        setMessages(newMessages);
+
         if (isLoggedIn && chatroomId) {
             // 선택한 메시지 이후의 모든 메시지 삭제
             const { error: deleteError } = await supabase
@@ -542,18 +576,11 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             }
         }
 
-        // 상태에서 메시지 삭제
-        setMessages(prev => prev.slice(0, index));
-
         if (!isLoggedIn) {
             saveMessagesToSessionStorage(messages.slice(0, index));
         }
 
-        // 새로운 봇 응답 생성
-        setTimeout(() => {
-            const botResponse = `Regenerated response from ${chatbot.name}`;
-            generateBotResponse(botResponse);
-        }, 500);
+        await generateBotResponse(newMessages);
     };
 
     const handleTogglePlay = (index: number) => {
@@ -658,6 +685,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                             onRegenerate={() => { }}
                             onTogglePlay={() => { }}
                             isPlaying={false}
+                            isLoading={isGenerating}
                         />
                     )}
                     <div ref={messagesEndRef} />

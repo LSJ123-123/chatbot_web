@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Edit, Copy, RefreshCw, Play, Pause, Check, X } from 'lucide-react';
+import { Trash2, Edit, Copy, RefreshCw, Play, Pause, Check, X, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -14,9 +14,10 @@ interface ChatBoxProps {
     onRegenerate: () => void;
     onTogglePlay: () => void;
     isPlaying: boolean;
+    isLoading?: boolean;
 }
 
-const ChatBox = ({ message, onDelete, onEdit, onCopy, onRegenerate, onTogglePlay, isPlaying }: ChatBoxProps) => {
+const ChatBox = ({ message, onDelete, onEdit, onCopy, onRegenerate, onTogglePlay, isPlaying, isLoading }: ChatBoxProps) => {
     const [isHovered, setIsHovered] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(message.text);
@@ -73,7 +74,12 @@ const ChatBox = ({ message, onDelete, onEdit, onCopy, onRegenerate, onTogglePlay
                     ? 'bg-zinc-700 text-white' 
                     : 'bg-zinc-200 text-zinc-900'
             }`}>
-                {isEditing && isUser ? (
+                {isLoading ? (
+                    <div className="flex items-center">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        응답을 생성하고 있습니다...
+                    </div>
+                ) : isEditing && isUser ? (
                     <div className="flex items-center">
                         <Input
                             value={editText}
