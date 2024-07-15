@@ -11,8 +11,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import Profile, { ProfileType } from "@/components/profile";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ChatbotDetailData from '@/components/chatbot-detail';
 import LikeButton from '@/components/like';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -27,6 +27,17 @@ type Episode = {
     episode_number: number;
 };
 
+type DetailData = {
+    id: number;
+    name: string;
+    chatbot_desc: string;
+    content_desc: string;
+    img: string;
+    ott_link: string;
+    likes: number;
+    msg_count: number;
+}
+
 export default function ChatBotPage({ params }: { params: { chatbotId: string, category: string, episode: string } }) {
     const [chatbot, setChatbot] = useState<any>(null);
     const [messages, setMessages] = useState<any[]>([]);
@@ -38,6 +49,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
     const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(true);
     const [categories, setCategories] = useState<Category[]>([]);
     const [episodes, setEpisodes] = useState<Episode[]>([]);
+    const [detailData, setDetailData] = useState<DetailData[]>([]);
     const [selectedCategory, setSelectedCategory] = useState(params.category);
     const [selectedEpisode, setSelectedEpisode] = useState(params.episode);
 
@@ -227,7 +239,11 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             return;
         }
 
-        setChatbot(data);
+        if (data) {
+            setChatbot(data as DetailData);
+            // Chatbot의 상세 정보를 다른 state 변수에 저장할 수 있습니다.
+            setDetailData([data as DetailData]);
+        }
     };
 
     const checkLoginStatus = async () => {
@@ -574,24 +590,22 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                         <PopoverTrigger asChild>
                             <Label className='text-2xl font-bold text-zinc-800'>{chatbot ? chatbot.name : '로딩 중...'}</Label>
                         </PopoverTrigger>
-                        <PopoverContent className="w-150">
+                        <PopoverContent className="w-150 p-5">
                             {chatbot && (
-                                <Profile
-                                    type={ProfileType.Chatbot}
-                                    data={{
-                                        name: chatbot.name,
-                                        made: '',
-                                        chat_desc: '',
-                                        imageUrl: chatbot.img,
-                                        content_desc: chatbot.content_desc,
-                                        ott_link: chatbot.ott_link
-                                    }}
+                                <ChatbotDetailData
+                                    id={chatbot.id}
+                                    name={chatbot.name}
+                                    chatbot_desc={chatbot.chatbot_desc}
+                                    content_desc={chatbot.content_desc}
+                                    img={chatbot.img}
+                                    ott_link={chatbot.ott_link}
+                                    likes={chatbot.likes}
+                                    msg_count={chatbot.msg_count}
                                 />
                             )}
-                            <LikeButton />
+
                         </PopoverContent>
                     </Popover>
-                    <LikeButton />
                     <div className='flex ml-auto'> {/* ml-auto를 사용하여 오른쪽으로 밀어줍니다 */}
                         <Select
                             value={selectedCategory}

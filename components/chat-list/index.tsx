@@ -17,8 +17,6 @@ const ChatList = ({ img, name, desc, link }: ChatBotProps) => (
             made: '2024.07.06',
             chat_desc: desc,
             imageUrl: img,
-            content_desc:'',
-            ott_link:''
         }} />
     </Link>
 );

@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { Heart } from "lucide-react";
+import ChatbotDetailData from '@/components/chatbot-detail';
 
-const LikeButton = () => {
+interface LikeButtonProps {
+    likes: number;
+}
+
+const LikeButton = ({ likes }: LikeButtonProps) => {
     const [liked, setLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(0);
+    const [likeCount, setLikeCount] = useState(likes);
 
     const toggleLike = () => {
         if (!liked) {

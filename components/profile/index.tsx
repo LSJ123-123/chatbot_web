@@ -20,8 +20,6 @@ interface ChatbotData {
   made: string;
   chat_desc: string;
   imageUrl: string;
-  content_desc : string;
-  ott_link : string;
 }
 
 // ProfileProps 타입 정의
@@ -56,8 +54,6 @@ const Profile = ({ type, data }: ProfileProps) => {
                  {(data as ChatbotData).made}
               </p>
               <p className="text-sm">{(data as ChatbotData).chat_desc}</p>
-              <p className="text-sm">{(data as ChatbotData).content_desc}</p>
-              <p className="text-sm">{(data as ChatbotData).ott_link}</p>
             </>
           )}
         </div>
