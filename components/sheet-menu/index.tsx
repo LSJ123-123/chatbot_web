@@ -1,68 +1,85 @@
+"use client"
 import { MenuIcon, Home, Clock, PanelLeftClose } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import {
-    Sheet,
-    SheetContent,
-    SheetTrigger,
-    SheetClose,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "@/components/ui/sheet";
-import Profile, { ProfileType } from "../profile";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from '@/utils/supabase/client';
 
-const fetchRecentChatbots = async () => {
-    "use server";
+interface Chatbot {
+    id: number;
+    name: string;
+}
+
+interface Category {
+    id: number;
+    name: string;
+}
+
+interface Chatroom {
+    id: number;
+    cuid: number;
+    category: string;
+    episode: string;
+    name: string;
+}
+
+const SheetMenu = () => {
+    const [recentChatrooms, setRecentChatrooms] = useState<Chatroom[]>([]);
+    const [user, setUser] = useState<any>(null); // Replace 'any' with actual user type
 
     const supabase = createClient();
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    useEffect(() => {
+        const fetchRecentChatrooms = async () => {
+            const { data: userData, error: userError } = await supabase.auth.getUser();
 
-    if (userError || !userData.user) {
-        return { recentChatbots: [], user: null };
-    }
+            if (userError || !userData.user) {
+                return;
+            }
 
-    const user = userData.user;
+            setUser(userData.user);
 
-    const { data, error } = await supabase
-        .from('chatrooms')
-        .select('id, cuid, category, episode')
-        .eq('uuid', user.id) // 유저의 UUID로 필터링
-        .order('last_date', { ascending: false })
-        .limit(5);
+            const { data: chatroomData, error: chatroomError } = await supabase
+                .from('chatrooms')
+                .select('id, cuid, category, episode')
+                .eq('uuid', userData.user.id)
+                .order('last_date', { ascending: false })
+                .limit(5);
 
-    if (error) {
-        console.error('Error fetching recent chatrooms:', error);
-        return { recentChatbots: [], user };
-    }
+            if (chatroomError) {
+                console.error('Error fetching recent chatrooms:', chatroomError);
+                return;
+            }
 
-    const { data: chatbots, error: chatbotError } = await supabase
-        .from('chatbots')
-        .select('id, name')
-        .in('id', data.map((chatroom) => chatroom.cuid));
+            const chatroomIds = chatroomData.map(chatroom => chatroom.cuid);
 
-    if (chatbotError) {
-        console.error('Error fetching chatbots:', chatbotError);
-        return { recentChatbots: [], user };
-    }
+            const { data: chatbotData, error: chatbotError } = await supabase
+                .from('chatbots')
+                .select('id, name')
+                .in('id', chatroomIds);
 
-    // 데이터에 이름을 추가
-    const recentChatbots = data.map((chatroom) => {
-        const bot = chatbots.find((bot) => bot.id === chatroom.cuid);
-        return {
-            ...chatroom,
-            name: bot?.name || 'Unknown',
+            if (chatbotError) {
+                console.error('Error fetching chatbots:', chatbotError);
+                return;
+            }
+
+            const chatbotsMap = chatbotData.reduce((map: Record<number, Chatbot>, bot: Chatbot) => {
+                map[bot.id] = bot;
+                return map;
+            }, {});
+
+            const recentChatbots = chatroomData.map(chatroom => ({
+                ...chatroom,
+                name: chatbotsMap[chatroom.cuid]?.name || 'Unknown',
+            }));
+
+            setRecentChatrooms(recentChatbots);
         };
-    });
 
-    return { recentChatbots, user };
-};
-
-const SheetMenu = async () => {
-    const { recentChatbots, user } = await fetchRecentChatbots();
+        fetchRecentChatrooms();
+    }, []);
 
     return (
         <Sheet>
@@ -97,19 +114,13 @@ const SheetMenu = async () => {
                                 Recent
                             </h3>
                             <ul className="space-y-3">
-                                {user ? (
-                                    recentChatbots.map((bot) => (
-                                        <li key={bot.id}>
-                                            <Link href={`/chatBot-page/${bot.cuid}/${bot.category}/${bot.episode}`} className="text-base text-gray-700 hover:text-gray-900 transition-colors">
-                                                {bot.name}
-                                            </Link>
-                                        </li>
-                                    ))
-                                ) : (
-                                    <li>
-                                        <span className="text-base text-gray-700">로그인 후에 이용 가능합니다.</span>
+                                {recentChatrooms.map((chatroom) => (
+                                    <li key={chatroom.id}>
+                                        <Link href={`/chatBot-page/${chatroom.cuid}/${chatroom.category}/${chatroom.episode}`} className="text-base text-gray-700 hover:text-gray-900 transition-colors">
+                                            {chatroom.name} / {chatroom.category} / {chatroom.episode}
+                                        </Link>
                                     </li>
-                                )}
+                                ))}
                             </ul>
                         </div>
                     </div>
@@ -118,14 +129,7 @@ const SheetMenu = async () => {
                 <div className="mt-auto border-t border-gray-300 bg-white flex-shrink-0">
                     {user && (
                         <div className="p-6">
-                            <Profile
-                                type={ProfileType.Member}
-                                data={{
-                                    username: user.user_metadata.full_name || "User",
-                                    email: user.email || '',
-                                    avatarUrl: "https://randomuser.me/api/portraits",
-                                }}
-                            />
+                            {/* Render user profile here */}
                         </div>
                     )}
                     <SheetClose asChild>
