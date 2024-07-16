@@ -9,12 +9,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ChatbotDetailData from '@/components/chatbot-detail';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { generateOpenAIResponse } from './actions';
+import { Loader2 } from 'lucide-react';
 
 type Category = {
     id: number;
@@ -66,6 +68,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
     useEffect(() => {
         const initializePage = async () => {
+            setIsLoadingMessages(true);
             await fetchChatbot();
             await fetchCategoriesAndEpisodes();
             await checkLoginStatus();
@@ -186,7 +189,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
     const generateWelcomeMessage = async () => {
         if (chatbot) {
-            const name = chatbot.name.split(' ')[0];
+            const name = chatbot.name.split(' (')[0];
             const welcomeMessage = `안녕하세요! ${name}입니다. 무엇을 도와드릴까요?`;
 
             if (isLoggedIn && chatroomId) {
@@ -312,15 +315,38 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
         }
     }
 
-    const saveChatroomId = (id: number) => localStorage.setItem(`chatroomId_${params.chatbotId}_${params.category}_${params.episode}`, id.toString());
-    const loadChatroomId = () => Number(localStorage.getItem(`chatroomId_${params.chatbotId}_${params.category}_${params.episode}`));
-
     const fetchOrCreateChatroom = async (userId: string) => {
-        const existingId = loadChatroomId();
-        if (existingId) {
-            setChatroomId(existingId);
-            await fetchMessages(existingId);
-            return;
+        if (chatroomId) {
+            const { data: chatroom, error } = await supabase
+                .from('chatrooms')
+                .select('*')
+                .eq('id', chatroomId)
+                .eq('uuid', userId)
+                .single();
+
+            if (error) {
+                console.error('Error fetching chatroom:', error);
+                toast({
+                    title: "오류 발생",
+                    description: "채팅방을 불러오는 도중 오류가 발생했습니다.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            if (chatroom) {
+                if (chatroom.category !== params.category || chatroom.episode !== params.episode) {
+                    setChatroomId(null);
+                    fetchOrCreateChatroom(userId);
+                    return;
+                }
+                await fetchMessages(chatroomId);
+                return;
+            } else {
+                setChatroomId(null);
+                fetchOrCreateChatroom(userId);
+                return;
+            }
         }
 
         const { data: newChatroom, error: insertError } = await supabase.rpc('create_unique_chatroom', {
@@ -332,7 +358,6 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
         if (newChatroom) {
             const newChatroomId = newChatroom[0].chatroom_id;
-            saveChatroomId(newChatroomId);
             setChatroomId(newChatroomId);
             await fetchMessages(newChatroomId);
         } else if (insertError) {
@@ -618,7 +643,10 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
     return (
         <div className='flex flex-col h-[calc(100vh-200px)] max-w-4xl mx-auto p-6 bg-zinc-100 rounded-lg shadow-lg'>
             <div className='flex items-center justify-between mb-6 ml-2'> {/* justify-between을 추가하여 오른쪽으로 정렬 */}
-                <div className='w-14 h-14 bg-zinc-300 rounded-full mr-4'></div>
+                <Avatar className="h-14 w-14 mr-3">
+                    <AvatarImage src={chatbot ? chatbot.img : null} alt="Profile" />
+                    <AvatarFallback>{chatbot ? chatbot.name.charAt(0) : '로딩'}</AvatarFallback>
+                </Avatar>
 
                 <div className='flex flex-grow'> {/* Select 컴포넌트를 포함하는 Flex 컨테이너 */}
                     <Popover>
@@ -679,29 +707,38 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
             <ScrollArea className='flex-grow mb-6 p-6 bg-white rounded-lg shadow-inner'>
                 <div className='space-y-4'>
-                    {messages.map((message, index) => (
-                        <ChatBox
-                            key={message.id}
-                            message={message}
-                            onDelete={() => handleDeleteMessage(index)}
-                            onEdit={(newText) => handleEditMessage(index, newText)}
-                            onCopy={() => handleCopyMessage(message.text)}
-                            onRegenerate={() => handleRegenerateMessage(index)}
-                            onTogglePlay={() => handleTogglePlay(index)}
-                            isPlaying={playingIndex === index}
-                        />
-                    ))}
-                    {animatingMessageId && (
-                        <ChatBox
-                            message={{ text: animatingText, sender: 'assistant' }}
-                            onDelete={() => { }}
-                            onEdit={() => { }}
-                            onCopy={() => { }}
-                            onRegenerate={() => { }}
-                            onTogglePlay={() => { }}
-                            isPlaying={false}
-                            isLoading={isGenerating}
-                        />
+                    {isLoadingMessages ? (
+                        <div className='flex items-center justify-center h-40'>
+                            <Loader2 className='w-10 h-10 animate-spin mr-4' />
+                            <Label className='text-lg text-zinc-800'>메시지를 불러오는 중입니다...</Label>
+                        </div>
+                    ) : (
+                        <>
+                            {messages.map((message, index) => (
+                                <ChatBox
+                                    key={message.id}
+                                    message={message}
+                                    onDelete={() => handleDeleteMessage(index)}
+                                    onEdit={(newText) => handleEditMessage(index, newText)}
+                                    onCopy={() => handleCopyMessage(message.text)}
+                                    onRegenerate={() => handleRegenerateMessage(index)}
+                                    onTogglePlay={() => handleTogglePlay(index)}
+                                    isPlaying={playingIndex === index}
+                                />
+                            ))}
+                            {animatingMessageId && (
+                                <ChatBox
+                                    message={{ text: animatingText, sender: 'assistant' }}
+                                    onDelete={() => { }}
+                                    onEdit={() => { }}
+                                    onCopy={() => { }}
+                                    onRegenerate={() => { }}
+                                    onTogglePlay={() => { }}
+                                    isPlaying={false}
+                                    isLoading={isGenerating}
+                                />
+                            )}
+                        </>
                     )}
                     <div ref={messagesEndRef} />
                 </div>
