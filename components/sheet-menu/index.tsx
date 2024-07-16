@@ -1,68 +1,114 @@
+"use client"
+// 방문했을 때는 최신목록이 안 변하고, 방문 후 메시지를 보내야지 trigger로 인해 최신목록 수정된다.
 import { MenuIcon, Home, Clock, PanelLeftClose } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import {
-    Sheet,
-    SheetContent,
-    SheetTrigger,
-    SheetClose,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "@/components/ui/sheet";
-import Profile, { ProfileType } from "../profile";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from '@/utils/supabase/client';
+import Profile, { ProfileType } from "@/components/profile";
 
-const fetchRecentChatbots = async () => {
-    "use server";
+interface Chatroom {
+    id: number;
+    cuid: number;
+    category: string;
+    episode: string;
+    name: string;
+}
 
+const SheetMenu = () => {
+    const [recentChatrooms, setRecentChatrooms] = useState<Chatroom[]>([]);
+    const [user, setUser] = useState<any>(null);
     const supabase = createClient();
+    
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    // 최근 채팅방 목록을 가져오는 함수
+    const fetchRecentChatrooms = async () => {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
 
-    if (userError || !userData.user) {
-        return { recentChatbots: [], user: null };
-    }
+        if (userError || !userData.user) {
+            console.error('Error fetching user:', userError);
+            return;
+        }
 
-    const user = userData.user;
+        setUser(userData.user);
 
-    const { data, error } = await supabase
-        .from('chatrooms')
-        .select('id, cuid, category, episode')
-        .eq('uuid', user.id) // 유저의 UUID로 필터링
-        .order('last_date', { ascending: false })
-        .limit(5);
+        // chatrooms 테이블에서 최근 방문한 5개의 채팅방 데이터를 가져옴
+        const { data: chatroomData, error: chatroomError } = await supabase
+            .from('chatrooms')
+            .select('id, cuid, category, episode, last_date')
+            .eq('uuid', userData.user.id)
+            .order('last_date', { ascending: false })
+            .limit(5);
 
-    if (error) {
-        console.error('Error fetching recent chatrooms:', error);
-        return { recentChatbots: [], user };
-    }
+        if (chatroomError) {
+            console.error('Error fetching recent chatrooms:', chatroomError);
+            return;
+        }
 
-    const { data: chatbots, error: chatbotError } = await supabase
-        .from('chatbots')
-        .select('id, name')
-        .in('id', data.map((chatroom) => chatroom.cuid));
+        const chatroomIds = chatroomData.map(chatroom => chatroom.cuid);
 
-    if (chatbotError) {
-        console.error('Error fetching chatbots:', chatbotError);
-        return { recentChatbots: [], user };
-    }
+        // chatbots 테이블에서 해당 채팅방들의 이름을 가져옴
+        const { data: chatbotData, error: chatbotError } = await supabase
+            .from('chatbots')
+            .select('id, name')
+            .in('id', chatroomIds);
 
-    // 데이터에 이름을 추가
-    const recentChatbots = data.map((chatroom) => {
-        const bot = chatbots.find((bot) => bot.id === chatroom.cuid);
-        return {
-            ...chatroom,
-            name: bot?.name || 'Unknown',
+        if (chatbotError) {
+            console.error('Error fetching chatbots:', chatbotError);
+            return;
+        }
+
+        // chatbot 데이터를 맵으로 변환
+        const chatbotsMap = chatbotData.reduce((map: Record<number, { name: string }>, bot: { id: number, name: string }) => {
+            map[bot.id] = { name: bot.name };
+            return map;
+        }, {});
+
+        // 최종 채팅방 데이터 생성 및 정렬
+        const recentChatbots = chatroomData
+            .map(chatroom => ({
+                ...chatroom,
+                name: chatbotsMap[chatroom.cuid]?.name || 'Unknown',
+            }))
+            .sort((a, b) => new Date(b.last_date).getTime() - new Date(a.last_date).getTime());
+
+        setRecentChatrooms(recentChatbots);
+    };
+
+    // 채팅방 방문 시 last_date를 업데이트하는 함수
+    const updateLastVisit = async (chatroomId: number) => {
+        const { data, error } = await supabase
+            .from('chatrooms')
+            .update({ last_date: new Date().toISOString() })
+            .eq('id', chatroomId);
+
+        if (error) {
+            console.error('Error updating last visit:', error);
+        } else {
+            // 업데이트 성공 시 채팅방 목록 다시 가져오기
+            fetchRecentChatrooms();
+        }
+    };
+
+    useEffect(() => {
+        fetchRecentChatrooms();
+
+        // Realtime 구독 설정
+        const chatroomSubscription = supabase
+            .channel('chatrooms')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'chatrooms' }, (payload) => {
+                console.log('Change received!', payload);
+                fetchRecentChatrooms();
+            })
+            .subscribe();
+
+        // 컴포넌트 언마운트 시 구독 해제
+        return () => {
+            chatroomSubscription.unsubscribe();
         };
-    });
-
-    return { recentChatbots, user };
-};
-
-const SheetMenu = async () => {
-    const { recentChatbots, user } = await fetchRecentChatbots();
+    }, []);
 
     return (
         <Sheet>
@@ -97,19 +143,13 @@ const SheetMenu = async () => {
                                 Recent
                             </h3>
                             <ul className="space-y-3">
-                                {user ? (
-                                    recentChatbots.map((bot) => (
-                                        <li key={bot.id}>
-                                            <Link href={`/chatBot-page/${bot.cuid}/${bot.category}/${bot.episode}`} className="text-base text-gray-700 hover:text-gray-900 transition-colors">
-                                                {bot.name}
-                                            </Link>
-                                        </li>
-                                    ))
-                                ) : (
-                                    <li>
-                                        <span className="text-base text-gray-700">로그인 후에 이용 가능합니다.</span>
+                                {recentChatrooms.map((chatroom) => (
+                                    <li key={chatroom.id}>
+                                        <Link href={`/chatBot-page/${chatroom.cuid}/${chatroom.category}/${chatroom.episode}`} className="text-base text-gray-700 hover:text-gray-900 transition-colors">
+                                            {chatroom.name} / {chatroom.category} / {chatroom.episode}
+                                        </Link>
                                     </li>
-                                )}
+                                ))}
                             </ul>
                         </div>
                     </div>
