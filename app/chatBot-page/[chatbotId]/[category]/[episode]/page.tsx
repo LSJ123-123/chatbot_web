@@ -186,7 +186,8 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
     const generateWelcomeMessage = async () => {
         if (chatbot) {
-            const welcomeMessage = `안녕하세요! ${chatbot.name}입니다. 무엇을 도와드릴까요?`;
+            const name = chatbot.name.split(' ')[0];
+            const welcomeMessage = `안녕하세요! ${name}입니다. 무엇을 도와드릴까요?`;
 
             if (isLoggedIn && chatroomId) {
                 const { data, error } = await supabase
@@ -369,10 +370,13 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
         setAnimatingMessageId(newMessageId);
         setAnimatingText('');
+        const name = chatbot.name.split(' (')[0];
+        const movie = chatbot.name.split(' (')[1].replace(')', '');
+
         try {
             // 시스템 프롬프트 생성
-            const systemPrompt = `너는 ${chatbot.name}이다. ${chatbot.name}처럼 생각하고 말해야 한다.
-    너는 ${categories.find(c => c.id.toString() === selectedCategory)?.name}하게 말해야한다.`;
+            const systemPrompt = `당신은 컨텐츠 '${movie}'의 등장인물 '${name}'이다. '${name}'처럼 생각하고 사용자와 대화하라.
+    또한 너는 '${categories.find(c => c.id.toString() === selectedCategory)?.name}'스럽게 말해야한다.`;
             ///너는 현재 에피소드로는 ${episodes.find(e => e.id.toString() === selectedEpisode)?.episode_number}회차까지의 기억을 가지고 있다.
 
             // 전체 메시지 배열 생성
@@ -419,10 +423,9 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                 setAnimatingText('');
                 await animateMessage(botResponse, newMessage.id);
 
-                setMessages(prevMessages => {
-                    const updatedMessages = [...prevMessages, newMessage];
-                    saveMessagesToSessionStorage(updatedMessages);
-                    return updatedMessages;
+                setMessages(messages => {
+                    saveMessagesToSessionStorage(messages);
+                    return messages;
                 });
             }
         } catch (error) {
