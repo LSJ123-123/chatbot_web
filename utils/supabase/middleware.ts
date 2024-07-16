@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  console.log('Middleware: Processing request for', request.nextUrl.pathname)
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -27,51 +29,66 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    console.log('Middleware: User state', user ? 'Logged in' : 'Not logged in')
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/') &&
-    !request.nextUrl.pathname.startsWith('/api') &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/error')
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    const token_hash = request.nextUrl.searchParams.get('token_hash')
+    if (token_hash) {
+      console.log('Middleware: Token hash found, skipping redirect')
+      return supabaseResponse
+    }
+
+    const message = request.nextUrl.searchParams.get('message')
+    if (message) {
+      console.log('Middleware: Message parameter found, skipping redirect')
+      return supabaseResponse
+    }
+
+    if (request.nextUrl.pathname.startsWith('/auth/complete-profile')) {
+      console.log('Middleware: On complete-profile page, skipping redirect')
+      return supabaseResponse
+    }
+
+    if (user && !user.user_metadata.name || user && !user.user_metadata.full_name) {
+      console.log('Middleware: User logged in but name not set, redirecting to complete-profile')
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/complete-profile'
+      return NextResponse.redirect(url)
+    }
+
+    if (
+      !user &&
+      !request.nextUrl.pathname.startsWith('/') &&
+      !request.nextUrl.pathname.startsWith('/api') &&
+      !request.nextUrl.pathname.startsWith('/login') &&
+      !request.nextUrl.pathname.startsWith('/auth') &&
+      !request.nextUrl.pathname.startsWith('/error')
+    ) {
+      console.log('Middleware: User not logged in, redirecting to login')
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+
+    if (
+      user &&
+      (request.nextUrl.pathname.startsWith('/login') ||
+        request.nextUrl.pathname.startsWith('/auth'))
+    ) {
+      console.log('Middleware: User logged in and on auth page, redirecting to home')
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+
+  } catch (error) {
+    console.error('Middleware: Error in session update', error)
   }
 
-  if (
-    user &&
-    (request.nextUrl.pathname.startsWith('/login') ||
-      request.nextUrl.pathname.startsWith('/auth'))
-  ) {
-    // user is logged in, potentially respond by redirecting the user to the home page
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    return NextResponse.redirect(url)
-  }
-
-  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-  // creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, but avoid changing
-  //    the cookies!
-  // 4. Finally:
-  //    return myNewResponse
-  // If this is not done, you may be causing the browser and server to go out
-  // of sync and terminate the user's session prematurely!
-
+  console.log('Middleware: No redirect, continuing with request')
   return supabaseResponse
 }

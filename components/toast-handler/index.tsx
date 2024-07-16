@@ -11,13 +11,13 @@ const ToastHandler = ({ error, message }: { error?: string, message?: string }) 
     if (error) {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "오류",
         description: error,
       })
     }
     if (message) {
       toast({
-        title: "Success",
+        title: "성공",
         description: message,
       })
     }
