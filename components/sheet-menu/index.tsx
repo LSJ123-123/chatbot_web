@@ -77,21 +77,6 @@ const SheetMenu = () => {
         setRecentChatrooms(recentChatbots);
     };
 
-    // 채팅방 방문 시 last_date를 업데이트하는 함수
-    const updateLastVisit = async (chatroomId: number) => {
-        const { data, error } = await supabase
-            .from('chatrooms')
-            .update({ last_date: new Date().toISOString() })
-            .eq('id', chatroomId);
-
-        if (error) {
-            console.error('Error updating last visit:', error);
-        } else {
-            // 업데이트 성공 시 채팅방 목록 다시 가져오기
-            fetchRecentChatrooms();
-        }
-    };
-
     useEffect(() => {
         fetchRecentChatrooms();
 

@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandDialogTrigger } from '../ui/command';
 import AuthButton from '../auth-button';
 import SheetMenu from '../sheet-menu';
+import { SearchCommand } from '../search-command';
 
 const Header = () => {
   return (
@@ -15,17 +15,7 @@ const Header = () => {
         <AuthButton />
       </div>
       <div className="flex items-center mr-4">
-        <CommandDialogTrigger>
-          <CommandInput placeholder="Type a command or search..." />
-          <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup heading="Suggestions">
-              <CommandItem>Calendar</CommandItem>
-              <CommandItem>Search Emoji</CommandItem>
-              <CommandItem>Calculator</CommandItem>
-            </CommandGroup>
-          </CommandList>
-        </CommandDialogTrigger>
+        <SearchCommand />
       </div>
     </header>
   )
