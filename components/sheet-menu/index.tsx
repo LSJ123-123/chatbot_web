@@ -75,6 +75,36 @@ const SheetMenu = () => {
         };
 
         fetchRecentChatrooms();
+
+        // Realtime 구독 설정
+        const chatroomSubscription = supabase
+            .channel('chatrooms')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'chatrooms' }, (payload : any) => {
+                //다른 사용자의 채팅방임
+                if (payload.new.uuid !== user.id) {
+                    return;
+                }
+                console.log('Change received!', payload);
+                fetchRecentChatrooms();
+            })
+            .subscribe();
+
+        
+        // 쿠키를 확인하여 로그인 상태 변경 감지
+        const checkAuthStateChange = () => {
+            const authStateChanged = document.cookie.includes('auth-state-changed=true');
+            if (authStateChanged) {
+                fetchRecentChatrooms();
+            }
+        };
+
+        const interval = setInterval(checkAuthStateChange, 1000); // 1초마다 확인
+
+        // 컴포넌트 언마운트 시 구독 해제
+        return () => {
+            chatroomSubscription.unsubscribe();
+            clearInterval(interval);
+        };
     }, []);
 
     return (

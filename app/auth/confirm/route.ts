@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
       
       if (user) {
         if (!user.user_metadata.name || !user.user_metadata.full_name) {
+          document.cookie = 'auth-state-changed=true;max-age=1'
           return redirect('/auth/complete-profile')
         } else {
           return redirect('/')
