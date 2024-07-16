@@ -1,4 +1,5 @@
 "use client"
+// 방문했을 때는 최신목록이 안 변하고, 방문 후 메시지를 보내야지 trigger로 인해 최신목록 수정된다.
 import { MenuIcon, Home, Clock, PanelLeftClose } from "lucide-react";
 import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
@@ -6,16 +7,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle,
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from '@/utils/supabase/client';
-
-interface Chatbot {
-    id: number;
-    name: string;
-}
-
-interface Category {
-    id: number;
-    name: string;
-}
+import Profile, { ProfileType } from "@/components/profile";
 
 interface Chatroom {
     id: number;
@@ -27,58 +19,95 @@ interface Chatroom {
 
 const SheetMenu = () => {
     const [recentChatrooms, setRecentChatrooms] = useState<Chatroom[]>([]);
-    const [user, setUser] = useState<any>(null); // Replace 'any' with actual user type
-
+    const [user, setUser] = useState<any>(null);
     const supabase = createClient();
+    
 
-    useEffect(() => {
-        const fetchRecentChatrooms = async () => {
-            const { data: userData, error: userError } = await supabase.auth.getUser();
+    // 최근 채팅방 목록을 가져오는 함수
+    const fetchRecentChatrooms = async () => {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
 
-            if (userError || !userData.user) {
-                return;
-            }
+        if (userError || !userData.user) {
+            console.error('Error fetching user:', userError);
+            return;
+        }
 
-            setUser(userData.user);
+        setUser(userData.user);
 
-            const { data: chatroomData, error: chatroomError } = await supabase
-                .from('chatrooms')
-                .select('id, cuid, category, episode')
-                .eq('uuid', userData.user.id)
-                .order('last_date', { ascending: false })
-                .limit(5);
+        // chatrooms 테이블에서 최근 방문한 5개의 채팅방 데이터를 가져옴
+        const { data: chatroomData, error: chatroomError } = await supabase
+            .from('chatrooms')
+            .select('id, cuid, category, episode, last_date')
+            .eq('uuid', userData.user.id)
+            .order('last_date', { ascending: false })
+            .limit(5);
 
-            if (chatroomError) {
-                console.error('Error fetching recent chatrooms:', chatroomError);
-                return;
-            }
+        if (chatroomError) {
+            console.error('Error fetching recent chatrooms:', chatroomError);
+            return;
+        }
 
-            const chatroomIds = chatroomData.map(chatroom => chatroom.cuid);
+        const chatroomIds = chatroomData.map(chatroom => chatroom.cuid);
 
-            const { data: chatbotData, error: chatbotError } = await supabase
-                .from('chatbots')
-                .select('id, name')
-                .in('id', chatroomIds);
+        // chatbots 테이블에서 해당 채팅방들의 이름을 가져옴
+        const { data: chatbotData, error: chatbotError } = await supabase
+            .from('chatbots')
+            .select('id, name')
+            .in('id', chatroomIds);
 
-            if (chatbotError) {
-                console.error('Error fetching chatbots:', chatbotError);
-                return;
-            }
+        if (chatbotError) {
+            console.error('Error fetching chatbots:', chatbotError);
+            return;
+        }
 
-            const chatbotsMap = chatbotData.reduce((map: Record<number, Chatbot>, bot: Chatbot) => {
-                map[bot.id] = bot;
-                return map;
-            }, {});
+        // chatbot 데이터를 맵으로 변환
+        const chatbotsMap = chatbotData.reduce((map: Record<number, { name: string }>, bot: { id: number, name: string }) => {
+            map[bot.id] = { name: bot.name };
+            return map;
+        }, {});
 
-            const recentChatbots = chatroomData.map(chatroom => ({
+        // 최종 채팅방 데이터 생성 및 정렬
+        const recentChatbots = chatroomData
+            .map(chatroom => ({
                 ...chatroom,
                 name: chatbotsMap[chatroom.cuid]?.name || 'Unknown',
-            }));
+            }))
+            .sort((a, b) => new Date(b.last_date).getTime() - new Date(a.last_date).getTime());
 
-            setRecentChatrooms(recentChatbots);
-        };
+        setRecentChatrooms(recentChatbots);
+    };
 
+    // 채팅방 방문 시 last_date를 업데이트하는 함수
+    const updateLastVisit = async (chatroomId: number) => {
+        const { data, error } = await supabase
+            .from('chatrooms')
+            .update({ last_date: new Date().toISOString() })
+            .eq('id', chatroomId);
+
+        if (error) {
+            console.error('Error updating last visit:', error);
+        } else {
+            // 업데이트 성공 시 채팅방 목록 다시 가져오기
+            fetchRecentChatrooms();
+        }
+    };
+
+    useEffect(() => {
         fetchRecentChatrooms();
+
+        // Realtime 구독 설정
+        const chatroomSubscription = supabase
+            .channel('chatrooms')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'chatrooms' }, (payload) => {
+                console.log('Change received!', payload);
+                fetchRecentChatrooms();
+            })
+            .subscribe();
+
+        // 컴포넌트 언마운트 시 구독 해제
+        return () => {
+            chatroomSubscription.unsubscribe();
+        };
     }, []);
 
     return (
@@ -129,7 +158,14 @@ const SheetMenu = () => {
                 <div className="mt-auto border-t border-gray-300 bg-white flex-shrink-0">
                     {user && (
                         <div className="p-6">
-                            {/* Render user profile here */}
+                            <Profile
+                                type={ProfileType.Member}
+                                data={{
+                                    username: user.user_metadata.full_name || "User",
+                                    email: user.email || '',
+                                    avatarUrl: "https://randomuser.me/api/portraits",
+                                }}
+                            />
                         </div>
                     )}
                     <SheetClose asChild>
