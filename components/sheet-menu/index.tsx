@@ -14,86 +14,67 @@ interface Chatroom {
     cuid: number;
     category: string;
     episode: string;
-    last_date: string;
     name: string;
 }
 
 const SheetMenu = () => {
     const [recentChatrooms, setRecentChatrooms] = useState<Chatroom[]>([]);
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<any>(null); // Replace 'any' with actual user type
+
     const supabase = createClient();
 
-    // 최근 채팅방 목록을 가져오는 함수
-    const fetchRecentChatrooms = async () => {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
+    useEffect(() => {
+        const fetchRecentChatrooms = async () => {
+            const { data: userData, error: userError } = await supabase.auth.getUser();
 
-        if (userError || !userData.user) {
-            console.error('Error fetching user:', userError);
-            return;
-        }
+            if (userError || !userData.user) {
+                setUser(null);
+                setRecentChatrooms([]);
+                return;
+            }
 
-        setUser(userData.user);
+            setUser(userData.user);
 
-        // chatrooms 테이블에서 최근 방문한 5개의 채팅방 데이터를 가져옴
-        const { data: chatroomData, error: chatroomError } = await supabase
-            .from('chatrooms')
-            .select('id, cuid, category, episode, last_date')
-            .eq('uuid', userData.user.id)
-            .order('last_date', { ascending: false })
-            .limit(5);
+            const { data: chatroomData, error: chatroomError } = await supabase
+                .from('chatrooms')
+                .select('id, cuid, category, episode')
+                .eq('uuid', userData.user.id)
+                .order('last_date', { ascending: false })
+                .limit(5);
 
-        if (chatroomError) {
-            console.error('Error fetching recent chatrooms:', chatroomError);
-            return;
-        }
+            if (chatroomError) {
+                console.error('Error fetching recent chatrooms:', chatroomError);
+                setRecentChatrooms([]);
+                return;
+            }
 
-        const chatroomIds = chatroomData.map(chatroom => chatroom.cuid);
+            const chatroomIds = chatroomData.map(chatroom => chatroom.cuid);
 
-        // chatbots 테이블에서 해당 채팅방들의 이름을 가져옴
-        const { data: chatbotData, error: chatbotError } = await supabase
-            .from('chatbots')
-            .select('id, name')
-            .in('id', chatroomIds);
+            const { data: chatbotData, error: chatbotError } = await supabase
+                .from('chatbots')
+                .select('id, name')
+                .in('id', chatroomIds);
 
-        if (chatbotError) {
-            console.error('Error fetching chatbots:', chatbotError);
-            return;
-        }
+            if (chatbotError) {
+                console.error('Error fetching chatbots:', chatbotError);
+                setRecentChatrooms([]);
+                return;
+            }
 
-        // chatbot 데이터를 맵으로 변환
-        const chatbotsMap = chatbotData.reduce((map: Record<number, { name: string }>, bot: { id: number, name: string }) => {
-            map[bot.id] = { name: bot.name };
-            return map;
-        }, {});
+            const chatbotsMap = chatbotData.reduce((map: Record<number, { name: string }>, bot) => {
+                map[bot.id] = { name: bot.name };
+                return map;
+            }, {});
 
-        // 최종 채팅방 데이터 생성 및 정렬
-        const recentChatbots = chatroomData
-            .map(chatroom => ({
+            const recentChatbots = chatroomData.map(chatroom => ({
                 ...chatroom,
                 name: chatbotsMap[chatroom.cuid]?.name || 'Unknown',
-            }))
-            .sort((a, b) => new Date(b.last_date).getTime() - new Date(a.last_date).getTime());
+            }));
 
-        setRecentChatrooms(recentChatbots);
-    };
-
-    useEffect(() => {
-        fetchRecentChatrooms();
-
-        // Realtime 구독 설정
-        const chatroomSubscription = supabase
-            .channel('chatrooms')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'chatrooms' }, (payload) => {
-                console.log('Change received!', payload);
-                fetchRecentChatrooms();
-            })
-            .subscribe();
-
-
-        // 컴포넌트 언마운트 시 구독 해제
-        return () => {
-            chatroomSubscription.unsubscribe();
+            setRecentChatrooms(recentChatbots);
         };
+
+        fetchRecentChatrooms();
     }, []);
 
     return (
