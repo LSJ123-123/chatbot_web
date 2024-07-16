@@ -19,7 +19,7 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
-    redirect('/error')
+    redirect('/login?error=' + encodeURIComponent(error.message))
   }
 
   revalidatePath('/', 'layout')
@@ -42,23 +42,8 @@ export async function signup(formData: FormData) {
   const { error } = await supabase.auth.signUp(data)
 
   if (error) {
-    redirect('/error')
+    redirect('/login?error=' + encodeURIComponent(error.message))
   }
 
-  revalidatePath('/', 'layout')
-  redirect('/')
-}
-
-export async function handleOAuthCallback(provider: string) {
-  const supabase = createClient()
-
-  const { data, error } = await supabase.auth.getSession()
-
-  if (error || !data.session) {
-    console.error('OAuth callback error:', error)
-    redirect('/error')
-  }
-
-  revalidatePath('/', 'layout')
-  redirect('/')
+  redirect('/login?message=' + encodeURIComponent('회원가입이 완료되었습니다. 이메일을 확인해주세요.'))
 }
