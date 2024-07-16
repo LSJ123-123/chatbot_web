@@ -24,7 +24,7 @@ export async function login(formData: FormData) {
 
   revalidatePath('/', 'layout')
 
-  cookies().set('auth-state-changed', 'true', { maxAge: 5 }) // 5초 동안 유효
+  cookies().set('auth-state-changed', 'true', { maxAge: 1 }) // 1초 동안 유효
 
   redirect('/')
 }
