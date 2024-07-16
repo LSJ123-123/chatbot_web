@@ -69,6 +69,9 @@ export default function CompleteProfile() {
                 title: "성공",
                 description: "프로필이 업데이트되었습니다.",
             })
+            
+            document.cookie = 'auth-state-changed=true;max-age=1'
+            
             window.location.href = '/'
         }
     }
