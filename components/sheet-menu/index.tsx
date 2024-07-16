@@ -19,80 +19,62 @@ interface Chatroom {
 
 const SheetMenu = () => {
     const [recentChatrooms, setRecentChatrooms] = useState<Chatroom[]>([]);
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<any>(null); // Replace 'any' with actual user type
+
     const supabase = createClient();
-    
-
-    // 최근 채팅방 목록을 가져오는 함수
-    const fetchRecentChatrooms = async () => {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-
-        if (userError || !userData.user) {
-            console.error('Error fetching user:', userError);
-            return;
-        }
-
-        setUser(userData.user);
-
-        // chatrooms 테이블에서 최근 방문한 5개의 채팅방 데이터를 가져옴
-        const { data: chatroomData, error: chatroomError } = await supabase
-            .from('chatrooms')
-            .select('id, cuid, category, episode, last_date')
-            .eq('uuid', userData.user.id)
-            .order('last_date', { ascending: false })
-            .limit(5);
-
-        if (chatroomError) {
-            console.error('Error fetching recent chatrooms:', chatroomError);
-            return;
-        }
-
-        const chatroomIds = chatroomData.map(chatroom => chatroom.cuid);
-
-        // chatbots 테이블에서 해당 채팅방들의 이름을 가져옴
-        const { data: chatbotData, error: chatbotError } = await supabase
-            .from('chatbots')
-            .select('id, name')
-            .in('id', chatroomIds);
-
-        if (chatbotError) {
-            console.error('Error fetching chatbots:', chatbotError);
-            return;
-        }
-
-        // chatbot 데이터를 맵으로 변환
-        const chatbotsMap = chatbotData.reduce((map: Record<number, { name: string }>, bot: { id: number, name: string }) => {
-            map[bot.id] = { name: bot.name };
-            return map;
-        }, {});
-
-        // 최종 채팅방 데이터 생성 및 정렬
-        const recentChatbots = chatroomData
-            .map(chatroom => ({
-                ...chatroom,
-                name: chatbotsMap[chatroom.cuid]?.name || 'Unknown',
-            }))
-            .sort((a, b) => new Date(b.last_date).getTime() - new Date(a.last_date).getTime());
-
-        setRecentChatrooms(recentChatbots);
-    };
 
     useEffect(() => {
-        fetchRecentChatrooms();
+        const fetchRecentChatrooms = async () => {
+            const { data: userData, error: userError } = await supabase.auth.getUser();
 
-        // Realtime 구독 설정
-        const chatroomSubscription = supabase
-            .channel('chatrooms')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'chatrooms' }, (payload) => {
-                console.log('Change received!', payload);
-                fetchRecentChatrooms();
-            })
-            .subscribe();
+            if (userError || !userData.user) {
+                setUser(null);
+                setRecentChatrooms([]);
+                return;
+            }
 
-        // 컴포넌트 언마운트 시 구독 해제
-        return () => {
-            chatroomSubscription.unsubscribe();
+            setUser(userData.user);
+
+            const { data: chatroomData, error: chatroomError } = await supabase
+                .from('chatrooms')
+                .select('id, cuid, category, episode')
+                .eq('uuid', userData.user.id)
+                .order('last_date', { ascending: false })
+                .limit(5);
+
+            if (chatroomError) {
+                console.error('Error fetching recent chatrooms:', chatroomError);
+                setRecentChatrooms([]);
+                return;
+            }
+
+            const chatroomIds = chatroomData.map(chatroom => chatroom.cuid);
+
+            const { data: chatbotData, error: chatbotError } = await supabase
+                .from('chatbots')
+                .select('id, name')
+                .in('id', chatroomIds);
+
+            if (chatbotError) {
+                console.error('Error fetching chatbots:', chatbotError);
+                setRecentChatrooms([]);
+                return;
+            }
+
+            const chatbotsMap = chatbotData.reduce((map: Record<number, { name: string }>, bot) => {
+                map[bot.id] = { name: bot.name };
+                return map;
+            }, {});
+
+            const recentChatbots = chatroomData.map(chatroom => ({
+                ...chatroom,
+                name: chatbotsMap[chatroom.cuid]?.name || 'Unknown',
+            }));
+
+            setRecentChatrooms(recentChatbots);
         };
+
+        fetchRecentChatrooms();
     }, []);
 
     return (
@@ -121,25 +103,29 @@ const SheetMenu = () => {
                                 <span>메인 페이지</span>
                             </Link>
                         </nav>
-
                         <div>
                             <h3 className="mb-4 text-lg font-semibold flex items-center text-gray-800">
                                 <Clock size={24} className="mr-3" />
                                 Recent
                             </h3>
                             <ul className="space-y-3">
-                                {recentChatrooms.map((chatroom) => (
-                                    <li key={chatroom.id}>
-                                        <Link href={`/chatBot-page/${chatroom.cuid}/${chatroom.category}/${chatroom.episode}`} className="text-base text-gray-700 hover:text-gray-900 transition-colors">
-                                            {chatroom.name} / {chatroom.category} / {chatroom.episode}
-                                        </Link>
+                                {user ? (
+                                    recentChatrooms.map((chatroom) => (
+                                        <li key={chatroom.id}>
+                                            <Link href={`/chatBot-page/${chatroom.cuid}/${chatroom.category}/${chatroom.episode}`} className="text-base text-gray-700 hover:text-gray-900 transition-colors">
+                                                {chatroom.name} / {chatroom.category} / {chatroom.episode}
+                                            </Link>
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li>
+                                        <span className="text-base text-gray-700">로그인 후에 이용 가능합니다.</span>
                                     </li>
-                                ))}
+                                )}
                             </ul>
                         </div>
                     </div>
                 </div>
-
                 <div className="mt-auto border-t border-gray-300 bg-white flex-shrink-0">
                     {user && (
                         <div className="p-6">
