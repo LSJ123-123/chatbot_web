@@ -80,10 +80,6 @@ const SheetMenu = () => {
         const chatroomSubscription = supabase
             .channel('chatrooms')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'chatrooms' }, (payload : any) => {
-                //다른 사용자의 채팅방임
-                if (payload.new.uuid !== user.id) {
-                    return;
-                }
                 console.log('Change received!', payload);
                 fetchRecentChatrooms();
             })
