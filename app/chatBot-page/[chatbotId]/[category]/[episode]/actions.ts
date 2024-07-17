@@ -24,7 +24,7 @@ export async function generateOpenAIResponse(messages: any[], chatbotId: string)
         const response = await openai.chat.completions.create({
             model: model,
             messages: messages,
-            temperature: 0.1,
+            temperature: 0.01,
             max_tokens: 1000,
         });
 
