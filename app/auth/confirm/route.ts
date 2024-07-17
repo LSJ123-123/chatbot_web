@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
         // 사용자 정보를 가져오지 못한 경우
         return redirect('/error?message=' + encodeURIComponent('사용자 정보를 가져오는데 실패했습니다.'))
       }
+    } else {
+      console.log(error)
     }
   }
 
