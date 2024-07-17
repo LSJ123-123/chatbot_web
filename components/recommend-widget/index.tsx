@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import CategoryRecommendation from '@/components/category-recommend';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
+import SkeletonRecommendation from '@/components/skeleton/recommend';
 
 const supabase = createClient();
 
@@ -12,6 +14,7 @@ const RecommendationWidget = () => {
   const [categories, setCategories] = useState([]);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     fetchCategories();
@@ -19,8 +22,14 @@ const RecommendationWidget = () => {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      rotateCategory();
-    }, 10000); // 10초마다 카테고리 변경
+      setProgress((oldProgress) => {
+        if (oldProgress === 100) {
+          rotateCategory();
+          return 0;
+        }
+        return Math.min(oldProgress + 1, 100);
+      });
+    }, 100); // 10초 동안 100번 업데이트
 
     return () => clearInterval(timer);
   }, [currentCategoryIndex, categories]);
@@ -51,19 +60,23 @@ const RecommendationWidget = () => {
     setCurrentCategoryIndex((prevIndex) =>
       (prevIndex + 1) % categories.length
     );
+    setProgress(0);
   };
 
   if (isLoading) {
-    return <Loader2 className="h-8 w-8 animate-spin" />;
+    return <SkeletonRecommendation />;
   }
 
   return (
-    <div className="bg-gray-100 p-4 rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">이런건 어떨까요...</h2>
-      {categories.length > 0 && (
-        <CategoryRecommendation category={categories[currentCategoryIndex]} />
-      )}
-      <Button onClick={rotateCategory} className="mt-4">다음 추천</Button>
+    <div className="bg-gray-100 p-10 rounded-lg shadow-lg mt-5 mx-24 mb-6">
+      <Label className="text-3xl font-bold mb-6 block">이런건 어떨까요...</Label>
+      <div className="min-h-[360px]"> {/* 최소 높이 설정 */}
+        {categories.length > 0 && (
+          <CategoryRecommendation category={categories[currentCategoryIndex]} />
+        )}
+      </div>
+      <Button onClick={rotateCategory} className="mt-6">다음 추천</Button>
+      <Progress value={progress} className="mt-8 h-1" /> {/* 높이 조정 */}
     </div>
   );
 };
