@@ -7,8 +7,9 @@ import {
     CarouselPrevious,
 } from "@/components/ui/carousel";
 import ChatList from "@/components/chat-list";
-import SkeletonChatList from '@/components/skeleton/chat-list';
+import SkeletonCarousel from "@/components/skeleton/section-carousel";
 import { createClient } from '@/utils/supabase/server';
+import CategoryChatbotSection from '../category-chatbot-section';
 
 async function getChatbots() {
     const supabase = createClient();
@@ -57,24 +58,20 @@ const ChatbotCarousel = async ({ text }: { text: string }) => {
 };
 
 const Section = ({ text }: { text: string }) => {
+
+    if (text == "챗봇 인기 순위") {
+        return (
+            <Suspense fallback={<SkeletonCarousel />}>
+                <ChatbotCarousel text={text} />
+            </Suspense>
+        );
+    }
+
     return (
         <Suspense fallback={<SkeletonCarousel />}>
-            <ChatbotCarousel text={text} />
+            <CategoryChatbotSection />
         </Suspense>
     );
 };
-
-const SkeletonCarousel = () => (
-    <div className="w-full max-w-screen container mx-auto p-5">
-        <p className="text-2xl font-bold mb-2">Loading...</p>
-        <div className="flex overflow-hidden">
-            {[...Array(3)].map((_, index) => (
-                <div key={index} className="md:basis-1/2 lg:basis-1/3 p-1">
-                    <SkeletonChatList />
-                </div>
-            ))}
-        </div>
-    </div>
-);
 
 export default Section;
