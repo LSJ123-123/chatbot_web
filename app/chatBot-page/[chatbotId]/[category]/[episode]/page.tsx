@@ -13,6 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ChatbotDetailData from '@/components/chatbot-detail';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { generateOpenAIResponse } from './actions';
@@ -69,9 +70,76 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
     useEffect(() => {
         const initializePage = async () => {
             setIsLoadingMessages(true);
-            await fetchChatbot();
-            await fetchCategoriesAndEpisodes();
+
+            // 챗봇 ID 확인 및 데이터 fetch
+            const { data: chatbot, error: chatbotError } = await supabase
+                .from('chatbots')
+                .select('*')
+                .eq('id', params.chatbotId)
+                .single();
+
+            if (chatbotError || !chatbot) {
+                router.push('/error?message=' + encodeURIComponent('존재하지 않는 챗봇입니다.'));
+                return;
+            }
+
+            setChatbot(chatbot as DetailData);
+
+            // 카테고리 및 에피소드 fetch
+            const { data: categoriesData, error: categoriesError } = await supabase
+                .from('chatbot_categories')
+                .select('categories(id, name)')
+                .eq('chatbot_id', params.chatbotId);
+
+            const { data: episodesData, error: episodesError } = await supabase
+                .from('episodes')
+                .select('*')
+                .eq('chatbot_id', params.chatbotId)
+                .order('episode_number', { ascending: true });
+
+            if (categoriesError || episodesError) {
+                console.error('Error fetching categories or episodes:', categoriesError || episodesError);
+                router.push('/error?message=' + encodeURIComponent('카테고리 또는 에피소드 정보를 가져오는데 실패했습니다.'));
+                return;
+            }
+
+            const categories = categoriesData.map((item: any) => item.categories) as Category[];
+            const episodes = episodesData as Episode[];
+
+            setCategories(categories);
+            setEpisodes(episodes);
+
+            // 카테고리 확인
+            const categoryExists = categories.some(c => c.id.toString() === params.category);
+            if (!categoryExists) {
+                const firstCategory = categories[0];
+                if (firstCategory) {
+                    const latestEpisode = episodes[episodes.length - 1];
+                    if (latestEpisode) {
+                        router.push(`/chatBot-page/${params.chatbotId}/${firstCategory.id}/${latestEpisode.id}`);
+                    } else {
+                        router.push('/error?message=' + encodeURIComponent('유효한 에피소드가 없습니다.'));
+                    }
+                } else {
+                    router.push('/error?message=' + encodeURIComponent('유효한 카테고리가 없습니다.'));
+                }
+                return;
+            }
+
+            // 에피소드 확인
+            const episodeExists = episodes.some(e => e.id.toString() === params.episode);
+            if (!episodeExists) {
+                const latestEpisode = episodes[episodes.length - 1];
+                if (latestEpisode) {
+                    router.push(`/chatBot-page/${params.chatbotId}/${params.category}/${latestEpisode.id}`);
+                } else {
+                    router.push('/error?message=' + encodeURIComponent('유효한 에피소드가 없습니다.'));
+                }
+                return;
+            }
+
             await checkLoginStatus();
+            setIsLoadingMessages(false);
         };
 
         initializePage();
@@ -247,23 +315,6 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
         scrollToBottom();
     };
 
-    const fetchChatbot = async () => {
-        const { data, error } = await supabase
-            .from('chatbots')
-            .select('*')
-            .eq('id', params.chatbotId)
-            .single();
-
-        if (error) {
-            console.error('Error fetching chatbot:', error);
-            return;
-        }
-
-        if (data) {
-            setChatbot(data as DetailData);
-        }
-    };
-
     const checkLoginStatus = async () => {
         const { data: { user } } = await supabase.auth.getUser()
         setIsLoggedIn(!!user);
@@ -274,33 +325,6 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
             loadMessagesFromSessionStorage();
         }
     }
-
-    const fetchCategoriesAndEpisodes = async () => {
-        const { data: categoriesData, error: categoriesError } = await supabase
-            .from('chatbot_categories')
-            .select('categories(id, name)')
-            .eq('chatbot_id', params.chatbotId);
-
-        if (categoriesError) {
-            console.error('Error fetching categories:', categoriesError);
-        } else {
-            // 타입 단언을 사용하여 타입 오류 해결
-            setCategories(categoriesData.map((item: any) => item.categories) as Category[]);
-        }
-
-        const { data: episodesData, error: episodesError } = await supabase
-            .from('episodes')
-            .select('*')
-            .eq('chatbot_id', params.chatbotId)
-            .order('episode_number', { ascending: true });
-
-        if (episodesError) {
-            console.error('Error fetching episodes:', episodesError);
-        } else {
-            // 타입 단언을 사용하여 타입 오류 해결
-            setEpisodes(episodesData as Episode[]);
-        }
-    };
 
     const saveMessagesToSessionStorage = (newMessages: any[]) => {
         sessionStorage.setItem(storageKey, JSON.stringify(newMessages));
@@ -685,22 +709,33 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                             </SelectContent>
                         </Select>
 
-                        <Select
-                            value={selectedEpisode}
-                            onValueChange={(value) => {
-                                setSelectedEpisode(value);
-                                router.push(`/chatBot-page/${params.chatbotId}/${selectedCategory}/${value}`);
-                            }}
-                        >
-                            <SelectTrigger className="w-[80px] ml-4">
-                                <SelectValue>{episodes.find(e => e.id.toString() === selectedEpisode)?.episode_number + '회' || "회차 선택"}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {episodes.map((episode) => (
-                                    <SelectItem key={episode.id} value={episode.id.toString()}>{episode.episode_number}회</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        {episodes.length > 0 && episodes[0].episode_number !== 0 && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div>
+                                            <Select
+                                                value={selectedEpisode}
+                                                onValueChange={() => { }}
+                                                disabled={true}
+                                            >
+                                                <SelectTrigger className="w-[80px] ml-4 cursor-not-allowed">
+                                                    <SelectValue>{episodes.find(e => e.id.toString() === selectedEpisode)?.episode_number + '회' || "회차 선택"}</SelectValue>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {episodes.map((episode) => (
+                                                        <SelectItem key={episode.id} value={episode.id.toString()}>{episode.episode_number}회</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side='bottom'>
+                                        <Label className='text-zinc-800'>추가되지 않은 기능입니다.</Label>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
                     </div>
                 </div>
             </div>
