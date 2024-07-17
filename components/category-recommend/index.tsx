@@ -46,6 +46,7 @@ const CategoryRecommendation = ({ category }: { category: any }) => {
                             name={chatbot.name}
                             desc={chatbot.chatbot_desc}
                             link={chatbot.id.toString()}
+                            category={category.id}
                         />
                     </div>
                 ))}
