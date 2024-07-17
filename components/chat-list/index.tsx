@@ -7,10 +7,11 @@ interface ChatBotProps {
     name: string;
     desc: string;
     link?: string;
+    category?: string;
 }
 
-const ChatList = ({ img, name, desc, link }: ChatBotProps) => (
-    <Link href={link ? `/chatBot-page/${link}` : "/"}>
+const ChatList = ({ img, name, desc, link, category }: ChatBotProps) => (
+    <Link href={link ? `/chatBot-page/${link}/${category}/0` : "/"}>
         {/* profile 컴포넌트 사용 */}
         <Profile type={ProfileType.Chatbot} data={{
             name: name,

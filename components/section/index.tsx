@@ -44,6 +44,7 @@ const ChatbotCarousel = async ({ text }: { text: string }) => {
                                 name={chatbot.name} 
                                 desc={chatbot.chatbot_desc} 
                                 link={chatbot.id} 
+                                category='0'
                             />
                         </div>
                     </CarouselItem>
