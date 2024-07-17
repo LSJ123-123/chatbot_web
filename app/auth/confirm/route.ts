@@ -1,5 +1,5 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -23,19 +23,21 @@ export async function GET(request: NextRequest) {
       
       if (user) {
         if (!user.user_metadata.name || !user.user_metadata.full_name) {
-          document.cookie = 'auth-state-changed=true;max-age=1'
-          return redirect('/auth/complete-profile')
+          // 쿠키 설정을 위해 Response 객체 사용
+          const response = NextResponse.redirect(new URL('/auth/complete-profile', request.url))
+          response.cookies.set('auth-state-changed', 'true', { maxAge: 1 })
+          return response
         } else {
-          return redirect('/')
+          return NextResponse.redirect(new URL('/', request.url))
         }
       } else {
         // 사용자 정보를 가져오지 못한 경우
-        return redirect('/error?message=' + encodeURIComponent('사용자 정보를 가져오는데 실패했습니다.'))
+        return NextResponse.redirect(new URL('/error?message=' + encodeURIComponent('사용자 정보를 가져오는데 실패했습니다.'), request.url))
       }
     } else {
       console.log(error)
     }
   }
 
-  return redirect('/error?message=' + encodeURIComponent('이메일 인증에 실패했습니다.'))
+  return NextResponse.redirect(new URL('/error?message=' + encodeURIComponent('이메일 인증에 실패했습니다.'), request.url))
 }
