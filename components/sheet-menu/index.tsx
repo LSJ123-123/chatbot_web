@@ -15,6 +15,8 @@ interface Chatroom {
     category: string;
     episode: string;
     name: string;
+    categoryName: string;
+    episodeNumber: string;
 }
 
 const SheetMenu = () => {
@@ -66,9 +68,47 @@ const SheetMenu = () => {
                 return map;
             }, {});
 
+            // 카테고리 데이터 가져오기
+            const { data: categoryData, error: categoryError } = await supabase
+                .from('categories')
+                .select('id, name') // 필요한 필드 선택
+                .in('id', chatroomData.map(cr => cr.category));
+
+            if (categoryError) {
+                console.error('Error fetching categories:', categoryError);
+                setRecentChatrooms([]);
+                return;
+            }
+
+            const categoryMap = categoryData.reduce((map: Record<number, string>, category) => {
+                map[category.id] = category.name;
+                console.log(category.id);
+                return map;
+            }, {});
+
+            // 에피소드 데이터 가져오기
+            const { data: episodeData, error: episodeError } = await supabase
+                .from('episodes')
+                .select('id, episode_number') // 필요한 필드 선택
+                .in('id', chatroomData.map(cr => cr.episode));
+
+            if (episodeError) {
+                console.error('Error fetching episodes:', episodeError);
+                setRecentChatrooms([]);
+                return;
+            }
+
+            const episodeMap = episodeData.reduce((map: Record<number, string>, episode) => {
+                map[episode.id] = episode.episode_number.toString(); // 에피소드 번호를 문자열로 변환
+                console.log(episode.id);
+                return map;
+            }, {});
+
             const recentChatbots = chatroomData.map(chatroom => ({
                 ...chatroom,
                 name: chatbotsMap[chatroom.cuid]?.name || 'Unknown',
+                categoryName: categoryMap[chatroom.category] || 'Unknown',
+                episodeNumber: episodeMap[chatroom.episode] || 'Unknown',
             }));
 
             setRecentChatrooms(recentChatbots);
@@ -79,13 +119,13 @@ const SheetMenu = () => {
         // Realtime 구독 설정
         const chatroomSubscription = supabase
             .channel('chatrooms')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'chatrooms' }, (payload : any) => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'chatrooms' }, (payload: any) => {
                 console.log('Change received!', payload);
                 fetchRecentChatrooms();
             })
             .subscribe();
 
-        
+
         // 쿠키를 확인하여 로그인 상태 변경 감지
         const checkAuthStateChange = () => {
             const authStateChanged = document.cookie.includes('auth-state-changed=true');
@@ -139,7 +179,7 @@ const SheetMenu = () => {
                                     recentChatrooms.map((chatroom) => (
                                         <li key={chatroom.id}>
                                             <Link href={`/chatBot-page/${chatroom.cuid}/${chatroom.category}/${chatroom.episode}`} className="text-base text-gray-700 hover:text-gray-900 transition-colors">
-                                                {chatroom.name} / {chatroom.category} / {chatroom.episode}
+                                                {chatroom.name} / {chatroom.categoryName} {chatroom.episodeNumber !== '0' && `/ ${chatroom.episodeNumber}회차`}
                                             </Link>
                                         </li>
                                     ))
