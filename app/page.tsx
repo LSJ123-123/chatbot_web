@@ -6,7 +6,7 @@ export default function Home() {
     <>
       <RecommendationWidget />
       <Section text="챗봇 인기 순위" />
-      <Section text="챗봇 카테고리" />
+      <Section text="" />
     </>
   )
 }

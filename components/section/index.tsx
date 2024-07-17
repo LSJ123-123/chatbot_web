@@ -9,6 +9,7 @@ import {
 import ChatList from "@/components/chat-list";
 import SkeletonCarousel from "@/components/skeleton/section-carousel";
 import { createClient } from '@/utils/supabase/server';
+import CategoryChatbotSection from '../category-chatbot-section';
 
 async function getChatbots() {
     const supabase = createClient();
@@ -57,9 +58,18 @@ const ChatbotCarousel = async ({ text }: { text: string }) => {
 };
 
 const Section = ({ text }: { text: string }) => {
+
+    if (text == "챗봇 인기 순위") {
+        return (
+            <Suspense fallback={<SkeletonCarousel />}>
+                <ChatbotCarousel text={text} />
+            </Suspense>
+        );
+    }
+
     return (
         <Suspense fallback={<SkeletonCarousel />}>
-            <ChatbotCarousel text={text} />
+            <CategoryChatbotSection />
         </Suspense>
     );
 };
