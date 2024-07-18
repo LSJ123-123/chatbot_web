@@ -258,7 +258,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
     const generateWelcomeMessage = async () => {
         if (chatbot) {
             const name = chatbot.name.split(' (')[0];
-            const welcomeMessage = `안녕하세요! ${name}입니다. 무엇을 도와드릴까요?`;
+            const welcomeMessage = `안녕하세요! ${name}입니다.`;
 
             if (isLoggedIn && chatroomId) {
                 const { data, error } = await supabase
