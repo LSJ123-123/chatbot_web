@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button";
 
+import { choseongIncludes, disassembleHangul } from 'es-hangul';
+
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive>
@@ -24,7 +26,7 @@ const Command = React.forwardRef<
 ))
 Command.displayName = CommandPrimitive.displayName
 
-interface CommandDialogProps extends DialogProps {}
+interface CommandDialogProps extends DialogProps { }
 
 const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
   return (
@@ -143,6 +145,27 @@ const CommandShortcut = ({
 }
 CommandShortcut.displayName = "CommandShortcut"
 
+const customFilter = (value: string, search: string) => {
+  // 완전 일치 검색
+  if (value.toLowerCase().includes(search.toLowerCase())) {
+    return 1
+  }
+
+  // 초성 검색
+  if (choseongIncludes(value, search)) {
+    return 0.8
+  }
+
+  // 중간 검색 (자음, 모음 분리 검색)
+  const disassembledValue = disassembleHangul(value)
+  const disassembledSearch = disassembleHangul(search)
+  if (disassembledValue.includes(disassembledSearch)) {
+    return 0.6
+  }
+
+  return 0
+}
+
 const CommandDialogTrigger = ({ children, ...props }: CommandDialogProps) => {
   return (
     <Dialog {...props}>
@@ -152,7 +175,7 @@ const CommandDialogTrigger = ({ children, ...props }: CommandDialogProps) => {
         </Button>
       </DialogTrigger>
       <DialogContent className="overflow-hidden p-0 shadow-lg">
-        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
+        <Command filter={customFilter} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
           {children}
         </Command>
       </DialogContent>
