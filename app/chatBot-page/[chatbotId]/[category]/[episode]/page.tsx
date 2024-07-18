@@ -665,19 +665,19 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
     };
 
     return (
-        <div className='flex flex-col h-[calc(100vh-200px)] max-w-4xl mx-auto p-6 bg-zinc-100 rounded-lg shadow-lg'>
-            <div className='flex items-center justify-between mb-6 ml-2'> {/* justify-between을 추가하여 오른쪽으로 정렬 */}
-                <Avatar className="h-14 w-14 mr-3">
-                    <AvatarImage src={chatbot ? chatbot.img : null} alt="Profile" />
-                    <AvatarFallback>{chatbot ? chatbot.name.charAt(0) : '로딩'}</AvatarFallback>
-                </Avatar>
+        <div className='flex flex-col h-[calc(100vh-200px)] w-full max-w-4xl mx-auto p-2 sm:p-4 md:p-6 bg-zinc-100 rounded-lg shadow-lg'>
+            <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 ml-2'>
+                <div className='flex items-center mb-4 sm:mb-0'>
+                    <Avatar className="h-10 w-10 sm:h-14 sm:w-14 mr-3">
+                        <AvatarImage src={chatbot ? chatbot.img : null} alt="Profile" />
+                        <AvatarFallback>{chatbot ? chatbot.name.charAt(0) : '로딩'}</AvatarFallback>
+                    </Avatar>
 
-                <div className='flex flex-grow'> {/* Select 컴포넌트를 포함하는 Flex 컨테이너 */}
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Label className='text-2xl font-bold text-zinc-800'>{chatbot ? chatbot.name : '로딩 중...'}</Label>
+                            <Label className='text-xl sm:text-2xl font-bold text-zinc-800'>{chatbot ? chatbot.name : '로딩 중...'}</Label>
                         </PopoverTrigger>
-                        <PopoverContent className="w-150 p-5">
+                        <PopoverContent className="w-[250px] sm:w-[300px] p-5">
                             {chatbot && (
                                 <ChatbotDetailData
                                     id={chatbot.id}
@@ -688,64 +688,63 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                                     ott_link={chatbot.ott_link}
                                 />
                             )}
-
                         </PopoverContent>
                     </Popover>
-                    <div className='flex ml-auto'> {/* ml-auto를 사용하여 오른쪽으로 밀어줍니다 */}
-                        <Select
-                            value={selectedCategory}
-                            onValueChange={(value) => {
-                                setSelectedCategory(value);
-                                router.push(`/chatBot-page/${params.chatbotId}/${value}/${selectedEpisode}`);
-                            }}
-                        >
-                            <SelectTrigger className="w-[180px] ml-4">
-                                <SelectValue>{categories.find(c => c.id.toString() === selectedCategory)?.name || "카테고리 선택"}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {categories.map((category) => (
-                                    <SelectItem key={category.id} value={category.id.toString()}>{category.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                </div>
+                <div className='flex flex-col sm:flex-row w-full sm:w-auto space-y-2 sm:space-y-0 sm:space-x-2'>
+                    <Select
+                        value={selectedCategory}
+                        onValueChange={(value) => {
+                            setSelectedCategory(value);
+                            router.push(`/chatBot-page/${params.chatbotId}/${value}/${selectedEpisode}`);
+                        }}
+                    >
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue>{categories.find(c => c.id.toString() === selectedCategory)?.name || "카테고리 선택"}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.id.toString()}>{category.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
-                        {episodes.length > 0 && episodes[0].episode_number !== 0 && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div>
-                                            <Select
-                                                value={selectedEpisode}
-                                                onValueChange={() => { }}
-                                                disabled={true}
-                                            >
-                                                <SelectTrigger className="w-[80px] ml-4 cursor-not-allowed">
-                                                    <SelectValue>{episodes.find(e => e.id.toString() === selectedEpisode)?.episode_number + '회' || "회차 선택"}</SelectValue>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {episodes.map((episode) => (
-                                                        <SelectItem key={episode.id} value={episode.id.toString()}>{episode.episode_number}회</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side='bottom'>
-                                        <Label className='text-zinc-800'>추가되지 않은 기능입니다.</Label>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                    </div>
+                    {episodes.length > 0 && episodes[0].episode_number !== 0 && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div>
+                                        <Select
+                                            value={selectedEpisode}
+                                            onValueChange={() => { }}
+                                            disabled={true}
+                                        >
+                                            <SelectTrigger className="w-full sm:w-[80px] cursor-not-allowed">
+                                                <SelectValue>{episodes.find(e => e.id.toString() === selectedEpisode)?.episode_number + '회' || "회차 선택"}</SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {episodes.map((episode) => (
+                                                    <SelectItem key={episode.id} value={episode.id.toString()}>{episode.episode_number}회</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent side='bottom'>
+                                    <Label className='text-zinc-800'>추가되지 않은 기능입니다.</Label>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                 </div>
             </div>
 
-            <ScrollArea className='flex-grow mb-6 p-6 bg-white rounded-lg shadow-inner'>
+            <ScrollArea className='flex-grow mb-4 sm:mb-6 p-4 sm:p-6 bg-white rounded-lg shadow-inner'>
                 <div className='space-y-4'>
                     {isLoadingMessages ? (
                         <div className='flex items-center justify-center h-40'>
-                            <Loader2 className='w-10 h-10 animate-spin mr-4' />
-                            <Label className='text-lg text-zinc-800'>메시지를 불러오는 중입니다...</Label>
+                            <Loader2 className='w-8 h-8 sm:w-10 sm:h-10 animate-spin mr-4' />
+                            <Label className='text-base sm:text-lg text-zinc-800'>메시지를 불러오는 중입니다...</Label>
                         </div>
                     ) : (
                         <>
@@ -778,18 +777,18 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                     <div ref={messagesEndRef} />
                 </div>
             </ScrollArea>
-            <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className='flex space-x-4'>
+            <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className='flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4'>
                 <Input
                     type="text"
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="메시지를 입력해주세요"
-                    className='flex-grow bg-white text-lg'
+                    className='flex-grow bg-white text-base sm:text-lg'
                     disabled={isGenerating}
                 />
                 <Button
                     type="submit"
-                    className='bg-zinc-700 hover:bg-zinc-600 text-white px-6 py-2 text-lg'
+                    className='bg-zinc-700 hover:bg-zinc-600 text-white px-4 sm:px-6 py-2 text-base sm:text-lg w-full sm:w-auto'
                     disabled={isGenerating || isAnimating}
                 >
                     전송

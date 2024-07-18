@@ -29,7 +29,7 @@ const RecommendationWidget = () => {
         }
         return Math.min(oldProgress + 1, 100);
       });
-    }, 100); // 10초 동안 100번 업데이트
+    }, 100);
 
     return () => clearInterval(timer);
   }, [currentCategoryIndex, categories]);
@@ -68,15 +68,15 @@ const RecommendationWidget = () => {
   }
 
   return (
-    <div className="bg-gray-100 p-10 rounded-lg shadow-lg mt-5 mx-24 mb-6">
-      <Label className="text-3xl font-bold mb-6 block">이런건 어떨까요...</Label>
-      <div className="min-h-[360px]"> {/* 최소 높이 설정 */}
+    <div className="bg-gray-100 p-4 sm:p-6 md:p-8 lg:p-10 rounded-lg shadow-lg mt-5 mx-auto mb-6 max-w-7xl w-full">
+      <Label className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 block">이런건 어떨까요...</Label>
+      <div className="min-h-[200px] sm:min-h-[280px] md:min-h-[320px] lg:min-h-[360px]"> {/* 최소 높이 설정 */}
         {categories.length > 0 && (
           <CategoryRecommendation category={categories[currentCategoryIndex]} />
         )}
       </div>
-      <Button onClick={rotateCategory} className="mt-6">다음 추천</Button>
-      <Progress value={progress} className="mt-8 h-1" /> {/* 높이 조정 */}
+      <Button onClick={rotateCategory} className="mt-4 sm:mt-6 w-full sm:w-auto">다음 추천</Button>
+      <Progress value={progress} className="mt-6 sm:mt-8 h-1" /> {/* 높이 조정 */}
     </div>
   );
 };
