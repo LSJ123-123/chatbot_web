@@ -11,12 +11,11 @@ import {
     CarouselPrevious,
 } from "@/components/ui/carousel";
 
-const ClientCategorySection = ({ initialCategories, initialChatbots }: { initialCategories: any, initialChatbots: any }) => {
+const ClientCategorySection = ({ initialCategories, initialChatbots, shuffledChatbotsByCategory } : any) => {
     const [selectedCategory, setSelectedCategory] = useState(initialCategories[0]?.id);
 
-    const filteredChatbots = selectedCategory
-        ? initialChatbots.filter((chatbot: any) =>
-            chatbot.chatbot_categories.some((cc: any) => cc.category_id === selectedCategory))
+    const displayChatbots = selectedCategory
+        ? shuffledChatbotsByCategory[selectedCategory]
         : initialChatbots;
 
     return (
@@ -26,10 +25,9 @@ const ClientCategorySection = ({ initialCategories, initialChatbots }: { initial
             }}
             className="w-full max-w-screen container mx-auto p-5"
         >
-
             <p className="text-2xl font-bold mb-2">챗봇 카테고리</p>
             <div className="flex overflow-x-auto space-x-2 mb-4">
-                {initialCategories.map((category: any) => (
+                {initialCategories.map((category : any) => (
                     <Button
                         key={category.id}
                         onClick={() => setSelectedCategory(category.id)}
@@ -41,7 +39,7 @@ const ClientCategorySection = ({ initialCategories, initialChatbots }: { initial
             </div>
 
             <CarouselContent className="flex">
-                {filteredChatbots.map((chatbot: any) => (
+                {displayChatbots.map((chatbot : any) => (
                     <CarouselItem key={chatbot.id} className="md:basis-1/2 lg:basis-1/3">
                         <div className="p-1">
                             <ChatList

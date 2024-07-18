@@ -1,34 +1,7 @@
-import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
-import ChatList from "@/components/chat-list";
 import { Label } from '@/components/ui/label';
+import ChatList from "@/components/chat-list";
 
-const supabase = createClient();
-
-const CategoryRecommendation = ({ category }: { category: any }) => {
-    const [chatbots, setChatbots] = useState([]);
-
-    useEffect(() => {
-        fetchChatbots();
-    }, [category]);
-
-    const fetchChatbots = async () => {
-        const { data, error } = await supabase
-            .from('chatbots')
-            .select(`
-        id, name, chatbot_desc, img,
-        chatbot_categories!inner(category_id)
-      `)
-            .eq('chatbot_categories.category_id', category.id)
-            .limit(2);
-
-        if (error) {
-            console.error('Error fetching chatbots:', error);
-        } else {
-            setChatbots(data as any);
-        }
-    };
-
+const CategoryRecommendation = ({ category, chatbots } : any) => {
     return (
         <div className="flex flex-col md:flex-row justify-between items-start">
             <div className="w-full md:w-1/2 pr-4">
