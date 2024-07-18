@@ -74,30 +74,37 @@ export async function generateOpenAIResponse(messages: any[], chatbotId: string)
         const userMessages = messages.filter(msg => msg.role === 'user');
         const lastUserMessage = userMessages[userMessages.length - 1].content;
 
-        for (let i = 0; i < 3; i++) {
-            const response = await openai.chat.completions.create({
-                model: model,
+        const response = await openai.chat.completions.create({
+            model: model,
+            messages: messages,
+            temperature: 0.01,
+            max_tokens: 1000,
+        });
+
+        let botResponse = response.choices[0].message?.content;
+
+        if (botResponse == null || botResponse === '') {
+            const fallbackResponse = await openai.chat.completions.create({
+                model: 'gpt-4o',
                 messages: messages,
-                temperature: 0.01,
+                temperature: 0.7,
                 max_tokens: 1000,
             });
-
-            let botResponse = response.choices[0].message?.content;
-
-            if (botResponse == null || botResponse === '') {
-                continue;
-            }
-
-            botResponse = await correctSpelling(botResponse);
-
-            if (await validateResponse(lastUserMessage, botResponse)) {
-                return botResponse;
-            }
+    
+            console.log('Fallback response:', fallbackResponse.choices[0].message?.content);
+    
+            return fallbackResponse.choices[0].message?.content ?? "죄송합니다. 응답을 생성하는 동안 오류가 발생했습니다.";
         }
 
-        // 3번의 시도에도 불구하고 적절한 응답을 생성하지 못한 경우 기본 GPT-4 모델 사용
+        botResponse = await correctSpelling(botResponse);
+
+        if (await validateResponse(lastUserMessage, botResponse)) {
+            return botResponse;
+        }
+
+        // 제대로 된 답을 못하면 gpt-4o로 답을 대체
         const fallbackResponse = await openai.chat.completions.create({
-            model: 'gpt-4',
+            model: 'gpt-4o',
             messages: messages,
             temperature: 0.7,
             max_tokens: 1000,
