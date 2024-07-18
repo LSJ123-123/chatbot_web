@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <>
       <RecommendationWidget />
-      <Section text="챗봇 인기 순위" />
+      <Section text="인기 챗봇 목록" />
       <Section text="" />
     </>
   )
