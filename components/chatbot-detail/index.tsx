@@ -31,7 +31,7 @@ const ChatbotDetailData = ({
                 .select('likes')
                 .eq('chatbot_id', id)
                 .single();
-            
+
             if (error) {
                 if (error.code === 'PGRST116') {  // 데이터가 없는 경우
                     // chatbot_stats에 새 레코드 삽입
@@ -40,7 +40,7 @@ const ChatbotDetailData = ({
                         .insert({ chatbot_id: id, likes: 0, msg_count: 0 })
                         .select()
                         .single();
-                    
+
                     if (insertError) {
                         console.error('Error inserting new chatbot_stats:', insertError);
                     } else {
@@ -50,7 +50,7 @@ const ChatbotDetailData = ({
                     console.error('Error fetching likes:', error);
                 }
             }
-            
+
             if (data) setLikes(data.likes);
         };
 
@@ -59,9 +59,9 @@ const ChatbotDetailData = ({
         // 실시간 구독 설정
         const channel = supabase
             .channel(`chatbot_stats:${id}`)
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
                 table: 'chatbot_stats',
                 filter: `chatbot_id=eq.${id}`
             }, payload => {
@@ -78,17 +78,18 @@ const ChatbotDetailData = ({
     }, [id]);
 
     return (
-        <div className="flex items-center mb-4">
-            <Avatar className="h-24 w-24 mr-6">
+        <div className="flex flex-col md:flex-row items-center mb-4 p-4">
+            <Avatar className="h-24 w-24 md:h-32 md:w-32 mb-4 md:mb-0 md:mr-6">
                 <AvatarImage src={img} alt="Profile" />
                 <AvatarFallback>{name.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-                <p className="text-lg font-semibold text-gray-900 mb-1">{name}</p>
-                <p className="text-sm text-gray-600 mb-2">{chatbot_desc}</p>
-                <p className="text-sm text-gray-600">{content_desc}</p>
-                <a href={ott_link} className="text-blue-500 hover:underline text-sm">{ott_link}</a>
-                <LikeButton chatbotId={id} likes={likes} />
+            <div className="flex-1 text-center md:text-left">
+                <p className="text-base md:text-lg font-semibold text-gray-900 mb-1">{name}</p>
+                <p className="text-xs md:text-sm text-gray-600 mb-1">{content_desc}</p>
+                <a href={ott_link} className="text-blue-500 hover:underline text-xs md:text-sm block mb-1">{ott_link}</a>
+                <div className="flex justify-center md:justify-start">
+                    <LikeButton chatbotId={id} likes={likes} />
+                </div>
             </div>
         </div>
     );
