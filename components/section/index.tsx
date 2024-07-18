@@ -15,14 +15,31 @@ async function getChatbots() {
     const supabase = createClient();
     const { data, error } = await supabase
         .from('chatbots')
-        .select('id, name, chatbot_desc, img')
-        .order('id');
+        .select(`
+            id, 
+            name, 
+            chatbot_desc, 
+            img, 
+            chatbot_stats!inner (
+                likes,
+                msg_count
+            )
+        `)
+        .limit(20);  // 더 많은 데이터를 가져옵니다
     
     if (error) {
         console.error('Error fetching chatbots:', error);
         return [];
     }
-    return data;
+
+    // JavaScript에서 정렬을 수행합니다
+    const sortedData = data.sort((a : any, b : any) => {
+        const scoreA = a.chatbot_stats.likes * 4 + a.chatbot_stats.msg_count;
+        const scoreB = b.chatbot_stats.likes * 4 + b.chatbot_stats.msg_count;
+        return scoreB - scoreA;  // 내림차순 정렬
+    });
+
+    return sortedData.slice(0, 20);  // 상위 20개만 반환
 }
 
 const ChatbotCarousel = async ({ text }: { text: string }) => {
@@ -59,7 +76,7 @@ const ChatbotCarousel = async ({ text }: { text: string }) => {
 
 const Section = ({ text }: { text: string }) => {
 
-    if (text == "챗봇 인기 순위") {
+    if (text == "인기 챗봇 목록") {
         return (
             <Suspense fallback={<SkeletonCarousel />}>
                 <ChatbotCarousel text={text} />
