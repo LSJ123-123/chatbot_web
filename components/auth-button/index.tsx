@@ -52,7 +52,7 @@ const AuthButton = () => {
     if (loading) {
         return (
             <form>
-                <Button variant="secondary" className="ml-4" disabled>로그인</Button>
+                <Button variant="secondary" className="ml-4 mr-4" disabled>로그인</Button>
             </form>
         );
     }
@@ -61,10 +61,10 @@ const AuthButton = () => {
         <div>
             {user ? (
                 <form>
-                    <Button variant="secondary" className="ml-4" formAction={handleLogout}>로그아웃</Button>
+                    <Button variant="secondary" className="ml-4 mr-4" formAction={handleLogout}>로그아웃</Button>
                 </form>
             ) : (
-                <Button asChild variant="secondary" className="ml-4">
+                <Button asChild variant="secondary" className="ml-4 mr-4">
                     <Link href="/login">로그인</Link>
                 </Button>
             )}

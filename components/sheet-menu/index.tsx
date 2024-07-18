@@ -82,7 +82,7 @@ const SheetMenu = () => {
 
             const categoryMap = categoryData.reduce((map: Record<number, string>, category) => {
                 map[category.id] = category.name;
-                console.log(category.id);
+                //console.log(category.id);
                 return map;
             }, {});
 
@@ -100,7 +100,7 @@ const SheetMenu = () => {
 
             const episodeMap = episodeData.reduce((map: Record<number, string>, episode) => {
                 map[episode.id] = episode.episode_number.toString(); // 에피소드 번호를 문자열로 변환
-                console.log(episode.id);
+                //console.log(episode.id);
                 return map;
             }, {});
 
@@ -120,7 +120,7 @@ const SheetMenu = () => {
         const chatroomSubscription = supabase
             .channel('chatrooms')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'chatrooms' }, (payload: any) => {
-                console.log('Change received!', payload);
+                //console.log('Change received!', payload);
                 fetchRecentChatrooms();
             })
             .subscribe();
@@ -146,15 +146,15 @@ const SheetMenu = () => {
     return (
         <Sheet>
             <SheetTrigger asChild>
-                <Button className="h-10 w-10" variant="secondary" size="icon">
-                    <MenuIcon size={24} />
+                <Button className="h-10 w-10 sm:h-10 sm:w-10" variant="secondary" size="icon">
+                    <MenuIcon size={20} className="sm:size-24" />
                 </Button>
             </SheetTrigger>
-            <SheetContent className="w-96 p-0 flex flex-col" side="left">
-                <SheetHeader className="p-6 bg-zinc-800 border-b-0 flex-shrink-0">
+            <SheetContent className="w-[80vw] sm:w-96 p-0 flex flex-col" side="left">
+                <SheetHeader className="p-4 sm:p-6 bg-zinc-800 border-b-0 flex-shrink-0">
                     <SheetTitle asChild>
                         <Link href="/" className="inline-block">
-                            <Image src="/images/logo.svg" alt="logo" width={180} height={60} priority />
+                            <Image src="/images/logo.svg" alt="logo" width={140} height={46} className="sm:w-[180px] sm:h-[60px]" priority />
                         </Link>
                     </SheetTitle>
                     <SheetDescription id="sheet-description" className="sr-only">
@@ -162,30 +162,30 @@ const SheetMenu = () => {
                     </SheetDescription>
                 </SheetHeader>
                 <div className="flex flex-col flex-grow overflow-y-auto bg-gray-100">
-                    <div className="px-6 py-8 space-y-8">
+                    <div className="px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
                         <nav>
-                            <Link href="/" className="flex items-center space-x-3 text-lg font-medium text-gray-800 hover:text-gray-600 transition-colors">
-                                <Home size={24} />
+                            <Link href="/" className="flex items-center space-x-2 sm:space-x-3 text-base sm:text-lg font-medium text-gray-800 hover:text-gray-600 transition-colors">
+                                <Home size={10} className="sm:size-10" />
                                 <span>메인 페이지</span>
                             </Link>
                         </nav>
                         <div>
-                            <h3 className="mb-4 text-lg font-semibold flex items-center text-gray-800">
-                                <Clock size={24} className="mr-3" />
+                            <h3 className="mb-3 sm:mb-4 text-base sm:text-lg font-semibold flex items-center text-gray-800">
+                                <Clock size={10} className="mr-2 sm:mr-3 sm:size-10" />
                                 Recent
                             </h3>
-                            <ul className="space-y-3">
+                            <ul className="space-y-2 sm:space-y-3">
                                 {user ? (
                                     recentChatrooms.map((chatroom) => (
                                         <li key={chatroom.id}>
-                                            <Link href={`/chatBot-page/${chatroom.cuid}/${chatroom.category}/${chatroom.episode}`} className="text-base text-gray-700 hover:text-gray-900 transition-colors">
+                                            <Link href={`/chatBot-page/${chatroom.cuid}/${chatroom.category}/${chatroom.episode}`} className="text-sm sm:text-base text-gray-700 hover:text-gray-900 transition-colors">
                                                 {chatroom.name} / {chatroom.categoryName} {chatroom.episodeNumber !== '0' && `/ ${chatroom.episodeNumber}회차`}
                                             </Link>
                                         </li>
                                     ))
                                 ) : (
                                     <li>
-                                        <span className="text-base text-gray-700">로그인 후에 이용 가능합니다.</span>
+                                        <span className="text-sm sm:text-base text-gray-700">로그인 후에 이용 가능합니다.</span>
                                     </li>
                                 )}
                             </ul>
@@ -194,7 +194,7 @@ const SheetMenu = () => {
                 </div>
                 <div className="mt-auto border-t border-gray-300 bg-white flex-shrink-0">
                     {user && (
-                        <div className="p-6">
+                        <div className="p-4 sm:p-6">
                             <Profile
                                 type={ProfileType.Member}
                                 data={{
@@ -206,8 +206,8 @@ const SheetMenu = () => {
                         </div>
                     )}
                     <SheetClose asChild>
-                        <Button variant="ghost" className="w-full py-4 flex items-center justify-center space-x-2 text-base font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-900">
-                            <PanelLeftClose />
+                        <Button variant="ghost" className="w-full py-3 sm:py-4 flex items-center justify-center space-x-2 text-sm sm:text-base font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-900">
+                            <PanelLeftClose size={10} className="sm:size-10" />
                             <span>메뉴 닫기</span>
                         </Button>
                     </SheetClose>

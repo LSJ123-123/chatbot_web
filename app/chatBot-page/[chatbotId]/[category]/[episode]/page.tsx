@@ -437,7 +437,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                 }))
             ];
 
-            console.log('Full messages:', fullMessages);
+            //console.log('Full messages:', fullMessages);
 
             // OpenAI API 호출
             const botResponse = await generateOpenAIResponse(fullMessages, params.chatbotId);
@@ -446,7 +446,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                 throw new Error('봇 응답을 생성하는 데 실패했습니다.');
             }
 
-            console.log('Bot response:', botResponse);
+            //console.log('Bot response:', botResponse);
 
             const newMessage = {
                 id: newMessageId,
