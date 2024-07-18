@@ -677,7 +677,7 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
                         <PopoverTrigger asChild>
                             <Label className='text-xl sm:text-2xl font-bold text-zinc-800'>{chatbot ? chatbot.name : '로딩 중...'}</Label>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[250px] sm:w-[300px] p-5">
+                        <PopoverContent className="w-[250px] sm:w-[500px] p-5">
                             {chatbot && (
                                 <ChatbotDetailData
                                     id={chatbot.id}
