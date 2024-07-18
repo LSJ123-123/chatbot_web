@@ -424,8 +424,8 @@ export default function ChatBotPage({ params }: { params: { chatbotId: string, c
 
         try {
             // 시스템 프롬프트 생성
-            const systemPrompt = `당신은 컨텐츠 '${movie}'의 등장인물 '${name}'이다. '${name}'처럼 생각하고 사용자와 대화하라.
-    또한 너는 '${categories.find(c => c.id.toString() === selectedCategory)?.name}'스럽게 말해야한다.`;
+            const systemPrompt = `당신은 영화 속 인물인 '${name}'이다. '${name}'가 되어 사용자와 대화하면 된다.
+    너와 대화하는 상대와의 관계는 '${categories.find(c => c.id.toString() === selectedCategory)?.name}'이다. 이를 감안하고 대화를해라.`;
             ///너는 현재 에피소드로는 ${episodes.find(e => e.id.toString() === selectedEpisode)?.episode_number}회차까지의 기억을 가지고 있다.
 
             // 전체 메시지 배열 생성
