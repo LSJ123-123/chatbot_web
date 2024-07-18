@@ -10,6 +10,7 @@ import ChatList from "@/components/chat-list";
 import SkeletonCarousel from "@/components/skeleton/section-carousel";
 import { createClient } from '@/utils/supabase/server';
 import CategoryChatbotSection from '../category-chatbot-section';
+import SkeletonCategorySection from '../skeleton/section-category';
 
 async function getChatbots() {
     const supabase = createClient();
@@ -85,7 +86,7 @@ const Section = ({ text }: { text: string }) => {
     }
 
     return (
-        <Suspense fallback={<SkeletonCarousel />}>
+        <Suspense fallback={<SkeletonCategorySection />}>
             <CategoryChatbotSection />
         </Suspense>
     );
