@@ -4,6 +4,8 @@
 
 시네마 캐릭터는 영화와 드라마에 등장하는 캐릭터들과 1대1 채팅을 즐길 수 있는 AI 챗봇 서비스입니다. GPT 파인튜닝을 통해 각 캐릭터의 특성을 학습하여 실제 캐릭터와 대화하는 듯한 경험을 제공합니다.
 
+### [데모 버전 실행해보기](https://characterchatbot.com)
+
 ## 기술 스택
 
 - FullStack: Next.js
@@ -69,3 +71,23 @@ npm run dev
 ## 기여하기
 
 프로젝트에 기여하고 싶으시다면 Pull Request를 보내주세요. 주요 변경사항은 먼저 이슈를 열어 논의해 주시기 바랍니다.
+
+## 기술 출처
+
+사용한 챗봇 api : open ai api
+
+smtp : Resend - https://resend.com/
+
+개발 프레임워크 : Next.js - https://nextjs.org/
+
+배포 : Vercel - https://vercel.com
+
+데이터베이스 및 보안인증: Supabase - https://supabase.com 
+
+디자인 : Tailwind - https://tailwindcss.com/, Shadcn/ui - https://ui.shadcn.com
+
+한글 검색 : es-hangul - https://es-hangul.slash.page/
+
+챗봇마다 음성 재생 - window.speechSynthesis API를 사용하여 브라우저에서 처리
+
+챗봇 파인튜닝 데이터 생성 기술 (AI) : https://github.com/character-chatbot/chatbot-finetuning
