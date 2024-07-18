@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 시네마 캐릭터
 
-## Getting Started
+시네마 캐릭터는 영화와 드라마에 등장하는 캐릭터들과 1대1 채팅을 즐길 수 있는 AI 챗봇 서비스입니다. GPT 파인튜닝을 통해 각 캐릭터의 특성을 학습하여 실제 캐릭터와 대화하는 듯한 경험을 제공합니다.
 
-First, run the development server:
+## 기술 스택
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- FullStack: Next.js
+- Backend: Supabase
+- Styling: Tailwind CSS 3.4.6, shadcn/ui
+- AI: OpenAI GPT (파인튜닝 적용)
+
+## 주요 기능
+
+- 다양한 영화/드라마 캐릭터와의 1대1 채팅
+- 캐릭터별 맞춤형 대화 경험
+- 실시간 채팅 인터페이스
+- 반응형 디자인을 통한 사용자 친화적인 UI/UX
+
+## 시작하기
+
+### 사전 요구사항
+
+- Node.js (버전 18 이상 권장)
+- npm 또는 yarn
+- Supabase 계정 및 프로젝트 설정
+
+### 설치
+
+1. 저장소를 클론합니다:
+
+```zsh
+git clone https://github.com/character-chatbot/chatbot_web.git
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. 프로젝트 디렉토리로 이동합니다:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```zsh
+cd chatbot_web
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+3. 의존성을 설치합니다:
 
-## Learn More
+```zsh
+npm install
+```
 
-To learn more about Next.js, take a look at the following resources:
+4. 환경변수 파일을 설정합니다(.env.local)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+OPENAI_API_KEY=
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+5. 개발 서버를 실행합니다:
 
-## Deploy on Vercel
+```zsh
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+6. 브라우저에서 `http://localhost:3000`으로 접속하여 애플리케이션을 확인합니다.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## 기여하기
+
+프로젝트에 기여하고 싶으시다면 Pull Request를 보내주세요. 주요 변경사항은 먼저 이슈를 열어 논의해 주시기 바랍니다.
